@@ -1,0 +1,212 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+from typing import Optional, Dict, Any
+import json
+import logging
+
+from ..db import get_db, get_redis
+from ..schema import SignalResponse, StatsResponse, HealthResponse, ErrorResponse
+from ..signals import get_latest_signal
+from ..stats import get_symbol_stats, get_performance_metrics, get_market_hours_stats
+from ..config import settings
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api", tags=["public"])
+
+
+@router.get("/signal", response_model=Optional[SignalResponse])
+async def get_signal(
+    symbol: str = Query(..., description="Trading symbol (e.g., CADJPY)"),
+    tf: str = Query(..., description="Timeframe (e.g., 5m)"),
+    db: Session = Depends(get_db),
+    redis_client = Depends(get_redis)
+):
+    """
+    Get the latest signal for a symbol and timeframe
+    Uses Redis cache for fast response
+    """
+    try:
+        # Try Redis cache first
+        cache_key = f"last_signal:{symbol.upper()}:{tf}"
+        cached_signal = redis_client.get(cache_key)
+        
+        if cached_signal:
+            signal_data = json.loads(cached_signal)
+            return SignalResponse(**signal_data)
+        
+        # Fallback to database
+        signal = get_latest_signal(db, symbol, tf)
+        
+        if not signal:
+            return None
+        
+        # Cache the result
+        signal_data = {
+            'id': signal.id,
+            'symbol': signal.symbol.name,
+            'tf': signal.tf,
+            'direction': signal.direction,
+            'enter_at': signal.enter_at.isoformat(),
+            'expire_at': signal.expire_at.isoformat(),
+            'generated_at': signal.created_at.isoformat()
+        }
+        
+        redis_client.setex(
+            cache_key,
+            settings.redis_cache_ttl,
+            json.dumps(signal_data)
+        )
+        
+        return SignalResponse(
+            id=signal.id,
+            symbol=signal.symbol.name,
+            tf=signal.tf,
+            direction=signal.direction,
+            enter_at=signal.enter_at,
+            expire_at=signal.expire_at,
+            generated_at=signal.created_at
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting signal: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get signal"
+        )
+
+
+@router.get("/stats", response_model=Optional[StatsResponse])
+async def get_stats(
+    symbol: str = Query(..., description="Trading symbol (e.g., CADJPY)"),
+    tf: str = Query(..., description="Timeframe (e.g., 5m)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get statistics for a symbol and timeframe
+    """
+    try:
+        stats = get_symbol_stats(db, symbol, tf)
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting stats: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get statistics"
+        )
+
+
+@router.get("/stats/performance")
+async def get_performance_stats(
+    symbol: str = Query(..., description="Trading symbol (e.g., CADJPY)"),
+    tf: str = Query(..., description="Timeframe (e.g., 5m)"),
+    days: int = Query(30, description="Number of days to analyze", ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """
+    Get performance metrics for a symbol over a period
+    """
+    try:
+        metrics = get_performance_metrics(db, symbol, tf, days)
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Error getting performance stats: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get performance metrics"
+        )
+
+
+@router.get("/stats/market-hours")
+async def get_market_hours_stats_endpoint(
+    symbol: str = Query(..., description="Trading symbol (e.g., CADJPY)"),
+    tf: str = Query(..., description="Timeframe (e.g., 5m)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get statistics broken down by market hours
+    """
+    try:
+        hourly_stats = get_market_hours_stats(db, symbol, tf)
+        return hourly_stats
+        
+    except Exception as e:
+        logger.error(f"Error getting market hours stats: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get market hours statistics"
+        )
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check(
+    db: Session = Depends(get_db),
+    redis_client = Depends(get_redis)
+):
+    """
+    Health check endpoint
+    """
+    try:
+        # Test database connection
+        db_status = "connected"
+        try:
+            db.execute("SELECT 1")
+        except Exception:
+            db_status = "disconnected"
+        
+        # Test Redis connection
+        redis_status = "connected"
+        try:
+            redis_client.ping()
+        except Exception:
+            redis_status = "disconnected"
+        
+        return HealthResponse(
+            status="healthy" if db_status == "connected" and redis_status == "connected" else "unhealthy",
+            database=db_status,
+            redis=redis_status
+        )
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}", exc_info=True)
+        return HealthResponse(
+            status="unhealthy",
+            database="unknown",
+            redis="unknown"
+        )
+
+
+@router.get("/symbols")
+async def get_available_symbols():
+    """
+    Get list of available trading symbols
+    """
+    return {
+        "symbols": settings.allowed_symbols,
+        "timeframes": ["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1d"]
+    }
+
+
+@router.get("/")
+async def root():
+    """
+    Root endpoint with API information
+    """
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "description": "Opustoshitel TV Trading Signals API",
+        "endpoints": {
+            "webhook": "/api/tv-hook",
+            "signal": "/api/signal",
+            "stats": "/api/stats",
+            "health": "/api/health"
+        },
+        "compliance": {
+            "age_restriction": "18+",
+            "disclaimer": "Not financial advice",
+            "risk_warning": "Trading involves risk"
+        }
+    }

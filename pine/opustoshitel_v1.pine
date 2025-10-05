@@ -1,0 +1,84 @@
+//@version=5
+indicator("Opustoshitel v1 (bar-close alerts)", overlay=false, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// === INPUT PARAMETERS ===
+ema_fast_length = input.int(5, title="EMA Fast Length", minval=1, maxval=200)
+ema_slow_length = input.int(20, title="EMA Slow Length", minval=1, maxval=200)
+rsi_length = input.int(14, title="RSI Length", minval=1, maxval=200)
+rsi_overbought = input.int(60, title="RSI Overbought", minval=50, maxval=100)
+rsi_oversold = input.int(40, title="RSI Oversold", minval=0, maxval=50)
+bb_length = input.int(20, title="Bollinger Bands Length", minval=1, maxval=200)
+bb_mult = input.float(2.0, title="Bollinger Bands Multiplier", minval=0.1, maxval=5.0)
+
+// === CALCULATIONS ===
+// Exponential Moving Averages
+ema_fast = ta.ema(close, ema_fast_length)
+ema_slow = ta.ema(close, ema_slow_length)
+
+// RSI
+rsi = ta.rsi(close, rsi_length)
+
+// Bollinger Bands
+[bb_upper, bb_middle, bb_lower] = ta.bb(close, bb_length, bb_mult)
+
+// === SIGNAL CONDITIONS ===
+// Long condition: Fast EMA crosses above Slow EMA + RSI not overbought + Close below BB upper
+long_condition = ta.crossover(ema_fast, ema_slow) and rsi < rsi_overbought and close < bb_upper
+
+// Short condition: Fast EMA crosses below Slow EMA + RSI not oversold + Close above BB lower
+short_condition = ta.crossunder(ema_fast, ema_slow) and rsi > rsi_oversold and close > bb_lower
+
+// === BAR STATE CHECK ===
+// Only trigger alerts on confirmed (closed) bars
+bar_closed = barstate.isconfirmed
+
+// Determine signal direction
+signal_direction = long_condition ? "UP" : short_condition ? "DOWN" : "NONE"
+
+// === PLOTTING ===
+// Plot EMAs
+plot(ema_fast, title="EMA Fast", color=color.blue, linewidth=2)
+plot(ema_slow, title="EMA Slow", color=color.orange, linewidth=2)
+
+// Plot RSI in separate pane
+rsi_color = rsi > rsi_overbought ? color.red : rsi < rsi_oversold ? color.green : color.gray
+plot(rsi, title="RSI", color=rsi_color, linewidth=2)
+
+// Plot Bollinger Bands
+plot(bb_upper, title="BB Upper", color=color.purple, linewidth=1)
+plot(bb_middle, title="BB Middle", color=color.purple, linewidth=1, style=plot.style_dashed)
+plot(bb_lower, title="BB Lower", color=color.purple, linewidth=1)
+// Plot signal arrows
+plotshape(long_condition and bar_closed, title="Long Signal", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.normal)
+plotshape(short_condition and bar_closed, title="Short Signal", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal)
+
+// === ALERT CONDITIONS ===
+// Create alert only on bar close and only if there's a valid signal direction
+alertcondition(bar_closed and (long_condition or short_condition), 
+               title="Opustoshitel Signal", 
+               message='{{"ts":' + str.tostring(time) + 
+                       ',"symbol":"' + syminfo.ticker + 
+                       '","tf":"' + timeframe.period + 
+                       '","dir":"' + signal_direction + '"}}')
+
+// === BACKGROUND COLORING ===
+// Color background when signal conditions are met (for visual confirmation)
+bgcolor(long_condition and bar_closed ? color.new(color.green, 90) : na, title="Long Background")
+bgcolor(short_condition and bar_closed ? color.new(color.red, 90) : na, title="Short Background")
+
+// === TABLE FOR CURRENT VALUES ===
+if barstate.islast
+    var table info_table = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)
+    table.cell(info_table, 0, 0, "Symbol", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 0, syminfo.ticker, text_color=color.black)
+    table.cell(info_table, 0, 1, "Timeframe", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 1, timeframe.period, text_color=color.black)
+    table.cell(info_table, 0, 2, "EMA Fast", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 2, str.tostring(ema_fast, "#.####"), text_color=color.black)
+    table.cell(info_table, 0, 3, "EMA Slow", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 3, str.tostring(ema_slow, "#.####"), text_color=color.black)
+    table.cell(info_table, 0, 4, "RSI", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 4, str.tostring(rsi, "#.##"), text_color=color.black)
+    table.cell(info_table, 0, 5, "Signal", text_color=color.black, bgcolor=color.gray)
+    table.cell(info_table, 1, 5, signal_direction, 
+               text_color=signal_direction == "UP" ? color.green : signal_direction == "DOWN" ? color.red : color.black)
