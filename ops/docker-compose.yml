@@ -49,7 +49,7 @@ services:
       - DATABASE_URL=postgresql://opustoshitel:password@postgres:5432/opustoshitel
       - REDIS_URL=redis://redis:6379
       - TV_WEBHOOK_SECRET=your-super-secret-webhook-key-change-this
-      - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080
+      - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080,http://144.124.233.176,http://144.124.233.176:80
       - DEBUG=true
       - LOG_LEVEL=INFO
     volumes:
@@ -74,9 +74,11 @@ services:
     build:
       context: ../web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://144.124.233.176
     container_name: opustoshitel-web
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://144.124.233.176
       - NEXT_PUBLIC_APP_NAME=Opustoshitel TV
     ports:
       - "3000:3000"
