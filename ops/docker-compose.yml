@@ -52,6 +52,13 @@ services:
       - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080,http://144.124.233.176,http://144.124.233.176:80
       - DEBUG=true
       - LOG_LEVEL=INFO
+      # SMTP Settings (замените на свои данные)
+      - SMTP_SERVER=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=
+      - SMTP_PASSWORD=
+      - SMTP_FROM_EMAIL=noreply@tradevision.com
+      - SMTP_FROM_NAME=Trade Vision
     volumes:
       - ../backend:/app
     ports:

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRightIcon, ChartBarIcon, ShieldCheckIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { LanguageProvider, useLanguage, LanguageSwitcher } from './components/LanguageSwitcher'
+import { LanguageProvider, useLanguage } from './components/LanguageSwitcher'
 import Disclaimer from './components/Disclaimer'
 
 const timeframes = [
@@ -15,24 +15,24 @@ const timeframes = [
 
 const features = [
   {
-    name_ru: 'Скорость',
-    name_en: 'Speed',
-    description_ru: 'Мгновенные сигналы без задержек, чтобы вы действовали первыми и не упускали прибыльные возможности',
-    description_en: 'Instant signals without delays so you act first and never miss profitable opportunities',
+    name_ru: 'Сигналы в реальном времени',
+    name_en: 'Real-time Signals',
+    description_ru: 'Получайте мгновенные уведомления когда наш алгоритм обнаруживает высоковероятные настройки',
+    description_en: 'Get instant notifications when our algorithm detects high-probability setups',
     icon: ClockIcon,
   },
   {
-    name_ru: 'Надёжность',
-    name_en: 'Reliability',
-    description_ru: 'Алгоритмический анализ на основе проверенных стратегий и машинного обучения для точных прогнозов',
-    description_en: 'Algorithmic analysis based on proven strategies and machine learning for accurate predictions',
+    name_ru: 'Аналитика в реальном времени',
+    name_en: 'Real-time Analytics',
+    description_ru: 'Отслеживайте производительность ваших сигналов с детальной статистикой',
+    description_en: 'Track your signal performance with detailed statistics',
     icon: ChartBarIcon,
   },
   {
-    name_ru: 'Поддержка 24/7',
-    name_en: '24/7 Support',
-    description_ru: 'Круглосуточная техническая поддержка и мониторинг системы для бесперебойной работы',
-    description_en: '24/7 technical support and system monitoring for uninterrupted operation',
+    name_ru: 'Безопасность данных',
+    name_en: 'Data Security',
+    description_ru: 'Ваши данные защищены с помощью современного шифрования',
+    description_en: 'Your data is protected with modern encryption',
     icon: ShieldCheckIcon,
   },
 ]
@@ -40,9 +40,6 @@ const features = [
 function HomePageContent() {
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const { language, t } = useLanguage()
-
-  // Check if admin mode is enabled for direct signal access
-  const isAdmin = typeof window !== 'undefined' && localStorage.getItem('admin_mode') === 'true'
 
   const getFeatureName = (feature: any) => {
     return language === 'ru' ? feature.name_ru : feature.name_en
@@ -61,31 +58,30 @@ function HomePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
-      <LanguageSwitcher />
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-[#0f1419] border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div className="flex-1"></div>
-            <div className="flex-shrink-0 text-center">
-              <h1 className="text-2xl font-light text-white tracking-tight">
-                Trade Vision
-              </h1>
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {language === 'ru' ? 'Торговые сигналы' : 'Trading Signals'}
+                </h1>
+              </div>
             </div>
-            <div className="flex-1"></div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-[#0a0e1a]">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-20">
+      <section className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl font-light text-white sm:text-6xl md:text-7xl tracking-tight"
+              className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl"
             >
               {language === 'ru' ? 'Профессиональные торговые сигналы' : 'Professional Trading Signals'}
             </motion.h1>
@@ -93,7 +89,7 @@ function HomePageContent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mt-8 text-lg text-gray-400 max-w-2xl mx-auto font-light leading-relaxed"
+              className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto"
             >
               {language === 'ru' 
                 ? 'Получайте точные торговые сигналы на основе алгоритмического анализа рынка в реальном времени'
@@ -107,8 +103,8 @@ function HomePageContent() {
               className="mt-10"
             >
               <Link
-                href={isAdmin ? "/signals?tf=3m" : "/auth/register"}
-                className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-xl text-black bg-white hover:bg-gray-100 transition-colors shadow-lg"
+                href="/signals?tf=3m"
+                className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-xl text-white bg-black hover:bg-gray-800 transition-colors"
               >
                 {language === 'ru' ? 'Начать торговлю' : 'Start Trading'}
                 <ArrowRightIcon className="ml-2 h-5 w-5" />
@@ -119,13 +115,13 @@ function HomePageContent() {
       </section>
 
       {/* Timeframes Section */}
-      <section className="py-20 bg-[#0a0e1a]">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-light text-white tracking-tight">
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">
               {language === 'ru' ? 'Выберите таймфрейм' : 'Choose Timeframe'}
             </h2>
-            <p className="mt-4 text-base text-gray-400 font-light">
+            <p className="mt-4 text-lg text-gray-600">
               {language === 'ru' 
                 ? 'Различные стратегии для разных стилей торговли'
                 : 'Different strategies for different trading styles'
@@ -140,18 +136,18 @@ function HomePageContent() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border border-gray-700"
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow"
               >
                 <div className="text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
                     {getTimeframeName(timeframe)}
                   </h3>
-                  <p className="text-gray-300 mb-6">
+                  <p className="text-gray-600 mb-6">
                     {getTimeframeDescription(timeframe)}
                   </p>
                   <Link
-                    href={isAdmin ? `/signals?tf=${timeframe.id}` : "/auth/register"}
-                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-black bg-white hover:bg-gray-100 transition-colors"
+                    href={`/signals?tf=${timeframe.id}`}
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-black hover:bg-gray-800 transition-colors"
                   >
                     {language === 'ru' ? 'Просмотр сигналов' : 'View Signals'}
                     <ArrowRightIcon className="ml-2 h-4 w-4" />
@@ -164,36 +160,36 @@ function HomePageContent() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-[#0a0e1a]">
-        <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-light text-white tracking-tight mb-4">
-              {language === 'ru' ? 'Почему выбирают нас?' : 'Why Choose Us?'}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">
+              {language === 'ru' ? 'Почему выбирают нас' : 'Why Choose Us'}
             </h2>
-            <p className="text-base text-gray-400 font-light max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-gray-600">
               {language === 'ru' 
-                ? 'Передовые технологии и алгоритмический анализ для ваших успешных сделок'
-                : 'Advanced technology and algorithmic analysis for your successful trades'
+                ? 'Мы предоставляем лучшие торговые сигналы на рынке'
+                : 'We provide the best trading signals in the market'
               }
             </p>
           </div>
           
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-[#0f1419] rounded-xl p-8 border border-gray-800 hover:border-gray-700 transition-all"
+                className="text-center"
               >
-                <div className="flex items-center justify-center h-14 w-14 rounded-lg bg-gradient-to-br from-gray-700 to-gray-800 mb-6">
-                  <feature.icon className="h-7 w-7 text-gray-300" />
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-black mb-4">
+                  <feature.icon className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-lg font-light text-white mb-3 tracking-tight">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {getFeatureName(feature)}
                 </h3>
-                <p className="text-sm text-gray-400 font-light leading-relaxed">
+                <p className="text-gray-600">
                   {getFeatureDescription(feature)}
                 </p>
               </motion.div>
@@ -203,13 +199,13 @@ function HomePageContent() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#0a0e1a] pb-24">
-        <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="bg-[#0f1419] rounded-2xl border border-gray-800 p-12 text-center">
-            <h2 className="text-3xl font-light text-white tracking-tight">
+      <section className="bg-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-white">
               {language === 'ru' ? 'Готовы начать?' : 'Ready to Start?'}
             </h2>
-            <p className="mt-4 text-base text-gray-400 font-light">
+            <p className="mt-4 text-lg text-gray-300">
               {language === 'ru' 
                 ? 'Присоединяйтесь к тысячам трейдеров, которые уже используют наши сигналы'
                 : 'Join thousands of traders already using our signals'
@@ -217,11 +213,11 @@ function HomePageContent() {
             </p>
             <div className="mt-8">
               <Link
-                href={isAdmin ? "/signals?tf=5m" : "/auth/register"}
-                className="inline-flex items-center px-8 py-4 text-base font-light rounded-lg text-black bg-white hover:bg-gray-100 transition-colors"
+                href="/signals?tf=5m"
+                className="inline-flex items-center px-8 py-4 border border-white text-lg font-medium rounded-xl text-black bg-white hover:bg-gray-100 transition-colors"
               >
                 {language === 'ru' ? 'Попробовать бесплатно' : 'Try Free'}
-                <ArrowRightIcon className="ml-2 h-4 w-4" />
+                <ArrowRightIcon className="ml-2 h-5 w-5" />
               </Link>
             </div>
           </div>
@@ -229,18 +225,18 @@ function HomePageContent() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0f1419] border-t border-gray-800">
-        <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+      <footer className="bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-gray-400 font-light text-sm">
+            <p className="text-gray-400">
               {language === 'ru' 
-                ? '© 2024 Trade Vision. Все права защищены.'
-                : '© 2024 Trade Vision. All rights reserved.'
+                ? '© 2024 Торговые сигналы. Все права защищены.'
+                : '© 2024 Trading Signals. All rights reserved.'
               }
             </p>
             <button
               onClick={() => setShowDisclaimer(true)}
-              className="mt-4 text-xs text-gray-500 hover:text-gray-300 underline font-light"
+              className="mt-4 text-sm text-gray-500 hover:text-gray-300 underline"
             >
               {language === 'ru' ? 'Отказ от ответственности' : 'Disclaimer'}
             </button>

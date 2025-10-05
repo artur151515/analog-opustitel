@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     tv_webhook_secret: str = "your-super-secret-webhook-key-change-this"
     secret_key: str = "your-secret-key-for-jwt-if-needed"
     
+    # Email settings
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@tradevision.com"
+    smtp_from_name: str = "Trade Vision"
+    
     # Allowed symbols
     allowed_symbols_raw: str = Field(
         default="CADJPY,GBPJPY,EURUSD,GBPUSD,USDJPY,EURJPY",

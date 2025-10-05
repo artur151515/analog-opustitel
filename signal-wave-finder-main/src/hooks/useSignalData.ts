@@ -44,7 +44,7 @@ export const useSignalData = (symbol: string, tf: string, apiUrl?: string) => {
       setLoading(true);
       setError(null);
 
-      const baseUrl = apiUrl || 'http://localhost:8000';
+      const baseUrl = apiUrl || 'http://144.124.233.176';
       
       const [signalRes, statsRes] = await Promise.all([
         fetch(`${baseUrl}/api/signal?symbol=${symbol}&tf=${tf}`, {

@@ -2,13 +2,14 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 import logging
 import time
 from contextlib import asynccontextmanager
 
 from .config import settings
-from .db import engine, Base
-from .routers import tv_hook, public
+from .db import engine, Base, test_connections
+from .routers import tv_hook, public, signal_generator, auth
 
 # Configure logging
 logging.basicConfig(
@@ -23,6 +24,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    
+    # Test connections first
+    if not test_connections():
+        logger.error("Failed to connect to required services")
+        raise RuntimeError("Failed to connect to required services")
     
     # Create database tables
     try:
@@ -83,6 +89,8 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(tv_hook.router)
 app.include_router(public.router)
+app.include_router(signal_generator.router)
+app.include_router(auth.router)
 
 
 # Global exception handler
@@ -117,11 +125,33 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health():
     """Simple health check"""
-    return {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "version": settings.app_version
-    }
+    try:
+        # Test database connection
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        
+        # Test Redis connection
+        from .db import redis_client
+        redis_client.ping()
+        
+        return {
+            "status": "healthy",
+            "timestamp": time.time(),
+            "version": settings.app_version,
+            "database": "connected",
+            "redis": "connected"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "timestamp": time.time(),
+                "version": settings.app_version,
+                "error": str(e)
+            }
+        )
 
 
 # Root endpoint

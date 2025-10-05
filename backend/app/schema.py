@@ -30,7 +30,7 @@ class TVWebhookPayload(BaseModel):
     
     @validator('tf')
     def validate_timeframe(cls, v):
-        valid_timeframes = ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d']
+        valid_timeframes = ['1m', '3m', '5m', '7m', '15m', '30m', '1h', '4h', '1d']
         if v not in valid_timeframes:
             raise ValueError(f'Invalid timeframe. Must be one of: {valid_timeframes}')
         return v
