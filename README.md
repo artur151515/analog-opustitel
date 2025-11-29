@@ -100,7 +100,7 @@ DEBUG=false
 LOG_LEVEL=INFO
 
 # DB
-DATABASE_URL=postgresql://opustoshitel:password@postgres:5432/opustoshitel
+DATABASE_URL=postgresql://visionoftrading:password@postgres:5432/visionoftrading
 
 # Redis
 REDIS_URL=redis://redis:6379

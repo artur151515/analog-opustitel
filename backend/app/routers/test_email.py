@@ -42,7 +42,7 @@ async def test_email(request: EmailRequest):
             return {
                 "success": False,
                 "message": "Failed to send email (check backend logs)",
-                "note": "Check logs: docker logs opustoshitel-backend"
+                "note": "Check logs: docker logs visionoftrading-backend"
             }
             
     except Exception as e:

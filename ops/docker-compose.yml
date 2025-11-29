@@ -4,11 +4,11 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: opustoshitel-postgres
+    container_name: visionoftrading-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: opustoshitel
-      POSTGRES_USER: opustoshitel
+      POSTGRES_DB: visionoftrading
+      POSTGRES_USER: visionoftrading
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -16,17 +16,17 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U opustoshitel"]
+      test: ["CMD-SHELL", "pg_isready -U visionoftrading"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - opustoshitel-network
+      - visionoftrading-network
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: opustoshitel-redis
+    container_name: visionoftrading-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
@@ -39,17 +39,17 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - opustoshitel-network
+      - visionoftrading-network
 
   # FastAPI Backend
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: opustoshitel-backend
+    container_name: visionoftrading-backend
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://opustoshitel:password@postgres:5432/opustoshitel
+      - DATABASE_URL=postgresql://visionoftrading:password@postgres:5432/visionoftrading
       - REDIS_URL=redis://redis:6379
       - TV_WEBHOOK_SECRET=your-super-secret-webhook-key-change-this
       - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080,https://visionoftrading.com,http://visionoftrading.com
@@ -79,7 +79,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - opustoshitel-network
+      - visionoftrading-network
 
   # Next.js Frontend
   web:
@@ -88,7 +88,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=https://visionoftrading.com
-    container_name: opustoshitel-web
+    container_name: visionoftrading-web
     environment:
       - NEXT_PUBLIC_API_URL=https://visionoftrading.com
       - NEXT_PUBLIC_APP_NAME=Vision of Trading
@@ -102,12 +102,12 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - opustoshitel-network
+      - visionoftrading-network
 
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
-    container_name: opustoshitel-nginx
+    container_name: visionoftrading-nginx
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ../nginx/static:/usr/share/nginx/html/static:ro
@@ -124,12 +124,12 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - opustoshitel-network
+      - visionoftrading-network
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  opustoshitel-network:
+  visionoftrading-network:
     driver: bridge

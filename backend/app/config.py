@@ -7,7 +7,7 @@ import json
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql://opustoshitel:password@localhost:5432/opustoshitel"
+    database_url: str = "postgresql://visionoftrading:password@localhost:5432/visionoftrading"
     
     @property
     def async_database_url(self) -> str:

@@ -6,7 +6,7 @@
 echo "🚀 Запуск генератора торговых сигналов..."
 
 # Проверяем что контейнеры запущены
-if ! docker-compose ps | grep -q "opustoshitel-backend.*Up"; then
+if ! docker-compose ps | grep -q "visionoftrading-backend.*Up"; then
     echo "❌ Backend контейнер не запущен!"
     echo "Запустите сначала: docker-compose up -d"
     exit 1

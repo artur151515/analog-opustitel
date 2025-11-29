@@ -14,7 +14,7 @@ mkdir -p $BACKUP_DIR
 # 1. Бэкап базы данных
 echo "🗄️ Бэкап базы данных..."
 cd /root/analog-opustitel/ops
-docker-compose exec -T postgres pg_dump -U opustoshitel opustoshitel > $BACKUP_DIR/db_backup_$DATE.sql
+docker-compose exec -T postgres pg_dump -U visionoftrading visionoftrading > $BACKUP_DIR/db_backup_$DATE.sql
 
 # 2. Бэкап конфигураций
 echo "⚙️ Бэкап конфигураций..."
