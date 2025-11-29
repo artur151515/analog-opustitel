@@ -1,0 +1,19 @@
+# Crontab для Trade Vision
+
+# Проверка здоровья системы каждые 5 минут
+*/5 * * * * /root/analog-opustitel/ops/health-check.sh >> /var/log/trade-vision-health.log 2>&1
+
+# Бэкап базы данных ежедневно в 3:00
+0 3 * * * /root/analog-opustitel/ops/backup.sh >> /var/log/trade-vision-backup.log 2>&1
+
+# Перезапуск генератора сигналов каждые 6 часов (на случай сбоев)
+0 */6 * * * cd /root/analog-opustitel/ops && docker-compose exec -T backend curl -X POST http://localhost:8000/api/signal-generator/start
+
+# Очистка логов Docker каждую неделю
+0 2 * * 0 docker system prune -f >> /var/log/trade-vision-cleanup.log 2>&1
+
+
+
+
+
+
