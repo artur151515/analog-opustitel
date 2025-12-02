@@ -279,6 +279,11 @@ async def verify_pocket_option(
     2. Этот ID не используется другим пользователем
     """
     try:
+        if not pocket_option_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Pocket Option ID is required"
+        )
         # Проверяем, был ли постбэк с таким pocket_option_id
         # Ищем любого пользователя с этим ID, у которого был постбэк
         user_with_postback = db.query(User).filter(
@@ -616,15 +621,44 @@ async def verify_pocket_option(
 ):
     """
     Верификация Pocket Option ID пользователя
+
+    Проверяет что:
+    1. С таким ID был постбэк от Pocket Option
+    2. Этот ID не используется другим пользователем
     """
     try:
-        # Здесь можно добавить логику проверки ID через Pocket Option API
-        # Пока что просто сохраняем ID
+        if not pocket_option_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Pocket Option ID is required"
+        )
+        # Проверяем, был ли постбэк с таким pocket_option_id
+        # Ищем любого пользователя с этим ID, у которого был постбэк
+        user_with_postback = db.query(User).filter(
+            User.pocket_option_id == pocket_option_id
+        ).first()
 
-        current_user.pocket_option_id = pocket_option_id
+        if not user_with_postback:
+            logger.warning(f"No postback received for Pocket Option ID: {pocket_option_id}")
+            raise HTTPException(
+                status_code=400,
+                detail="No postback received from Pocket Option for this ID. Please register with Pocket Option first."
+            )
+
+        # Проверяем, что этот ID принадлежит текущему пользователю или что у него еще нет ID
+        if user_with_postback.id != current_user.id:
+            logger.warning(f"Pocket Option ID {pocket_option_id} already belongs to user {user_with_postback.id}")
+            raise HTTPException(
+                status_code=400,
+                detail="This Pocket Option ID is already registered by another user"
+            )
+
+        # Если все проверки пройдены, подтверждаем верификацию
         current_user.pocket_option_verified = True
 
         db.commit()
+
+        logger.info(f"User {current_user.id} verified with Pocket Option ID: {pocket_option_id}")
 
         return {
             "status": "success",
@@ -632,6 +666,8 @@ async def verify_pocket_option(
             "pocket_option_id": pocket_option_id
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error verifying Pocket Option ID: {e}")
         raise HTTPException(status_code=500, detail=str(e))
