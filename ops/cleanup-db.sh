@@ -37,3 +37,4 @@ UNION SELECT 'postback_logs', COUNT(*) FROM postback_logs
 UNION SELECT 'signals', COUNT(*) FROM signals
 UNION SELECT 'verdicts', COUNT(*) FROM verdicts;
 "
+
