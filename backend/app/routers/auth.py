@@ -187,10 +187,10 @@ async def verify_pocket_option(
     """
     try:
         if not pocket_option_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Pocket Option ID is required"
-        )
+            raise HTTPException(
+                status_code=400,
+                detail="Pocket Option ID is required"
+            )
         # Проверяем, был ли постбэк с таким pocket_option_id
         # Ищем любого пользователя с этим ID, у которого был постбэк
         user_with_postback = db.query(User).filter(
