@@ -76,7 +76,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
     except jwt.JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
@@ -90,10 +90,10 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks, d
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     # Create verification token
     verification_token = secrets.token_urlsafe(32)
-    
+
     # Create new user
     new_user = User(
         email=user_data.email,
@@ -101,17 +101,17 @@ async def register(user_data: UserRegister, background_tasks: BackgroundTasks, d
         verification_token=verification_token,
         is_verified=False
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     # TODO: Send verification email
     # background_tasks.add_task(send_verification_email, user_data.email, verification_token)
-    
+
     # Send verification email
     email_sent = await send_verification_email(user_data.email, verification_token)
-    
+
     return {
         "message": "User registered successfully. Please check your email for verification link.",
         "email_sent": email_sent,
@@ -125,7 +125,7 @@ async def register_simple(user_data: UserRegister, db: Session = Depends(get_db)
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     # Create new user (already verified)
     new_user = User(
         email=user_data.email,
@@ -133,11 +133,11 @@ async def register_simple(user_data: UserRegister, db: Session = Depends(get_db)
         is_verified=True,  # Skip email verification
         is_active=True
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     return {
         "message": "User registered successfully",
         "user_id": new_user.id,
@@ -150,11 +150,11 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.verification_token == token).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid verification token")
-    
+
     user.is_verified = True
     user.verification_token = None
     db.commit()
-    
+
     return {"message": "Email verified successfully. Please register on Pocket Option."}
 
 
@@ -164,11 +164,11 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.verification_token == token).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid verification token")
-    
+
     user.is_verified = True
     user.verification_token = None
     db.commit()
-    
+
     return {"message": "Email verified successfully. Please register on Pocket Option."}
 
 
@@ -178,35 +178,58 @@ async def verify_pocket_option(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Верификация Pocket Option ID"""
-    pocket_option_id = data.get("pocket_option_id")
-    
-    if not pocket_option_id:
+    """
+    Верификация Pocket Option ID пользователя
+
+    Проверяет что:
+    1. С таким ID был постбэк от Pocket Option
+    2. Этот ID не используется другим пользователем
+    """
+    try:
+        if not pocket_option_id:
         raise HTTPException(
             status_code=400,
-            detail="pocket_option_id is required"
+            detail="Pocket Option ID is required"
         )
-    
-    # Проверяем, что ID не занят другим пользователем
-    existing_user = db.query(User).filter(
-        User.pocket_option_id == pocket_option_id,
-        User.id != current_user.id
-    ).first()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=400, 
-            detail="This Pocket Option ID is already registered to another user"
-        )
-    
-    current_user.pocket_option_id = pocket_option_id
-    current_user.pocket_option_verified = True
-    db.commit()
-    
-    return {
-        "message": "Pocket Option ID verified successfully",
-        "pocket_option_id": pocket_option_id
-    }
+        # Проверяем, был ли постбэк с таким pocket_option_id
+        # Ищем любого пользователя с этим ID, у которого был постбэк
+        user_with_postback = db.query(User).filter(
+            User.pocket_option_id == pocket_option_id
+        ).first()
+
+        if not user_with_postback:
+            logger.warning(f"No postback received for Pocket Option ID: {pocket_option_id}")
+            raise HTTPException(
+                status_code=400,
+                detail="No postback received from Pocket Option for this ID. Please register with Pocket Option first."
+            )
+
+        # Проверяем, что этот ID принадлежит текущему пользователю или что у него еще нет ID
+        if user_with_postback.id != current_user.id:
+            logger.warning(f"Pocket Option ID {pocket_option_id} already belongs to user {user_with_postback.id}")
+            raise HTTPException(
+                status_code=400,
+                detail="This Pocket Option ID is already registered by another user"
+            )
+
+        # Если все проверки пройдены, подтверждаем верификацию
+        current_user.pocket_option_verified = True
+
+        db.commit()
+
+        logger.info(f"User {current_user.id} verified with Pocket Option ID: {pocket_option_id}")
+
+        return {
+            "status": "success",
+            "message": "Pocket Option ID verified successfully",
+            "pocket_option_id": pocket_option_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying Pocket Option ID: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/login", response_model=Token)
@@ -219,20 +242,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail="User account is deactivated")
-    
+
     # Проверяем, подтвержден ли email
     if not user.is_verified:
         raise HTTPException(
             status_code=403,
             detail="Email not verified. Please check your email and click the verification link."
         )
-    
+
     user.last_login = datetime.utcnow()
     db.commit()
-    
+
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -251,22 +274,22 @@ async def resend_verification(
     email = data.get("email")
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
-    
+
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if user.is_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
-    
+
     # Generate new verification token
     verification_token = secrets.token_urlsafe(32)
     user.verification_token = verification_token
     db.commit()
-    
+
     # Send verification email
     email_sent = await send_verification_email(email, verification_token)
-    
+
     return {
         "message": "Verification email sent successfully",
         "email_sent": email_sent
@@ -281,10 +304,10 @@ async def change_password(
     """Изменить пароль"""
     if not verify_password(data.old_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect old password")
-    
+
     current_user.password_hash = hash_password(data.new_password)
     db.commit()
-    
+
     return {"message": "Password changed successfully"}
 
 @router.post("/logout")
@@ -298,14 +321,14 @@ async def can_access_signals(current_user: User = Depends(get_current_user)):
     """Проверка доступа к сигналам"""
     # Базовая проверка: email подтвержден и Pocket Option ID верифицирован
     basic_requirements_met = (
-        current_user.is_verified and 
+        current_user.is_verified and
         current_user.pocket_option_verified
     )
-    
+
     # Определяем уровень доступа на основе депозита
     balance = current_user.pocket_option_balance or current_user.balance
     access_level = "none"
-    
+
     if balance >= 150:
         access_level = "unlimited_all"  # Безлимит на основные + OTC
     elif balance >= 50:
@@ -314,10 +337,10 @@ async def can_access_signals(current_user: User = Depends(get_current_user)):
         access_level = "limited"  # 1 сигнал в день
     else:
         access_level = "none"  # Нет доступа
-    
+
     # Доступ разрешен, если есть хотя бы минимальный депозит
     can_access = basic_requirements_met and access_level != "none"
-    
+
     return {
         "can_access": can_access,
         "access_level": access_level,
