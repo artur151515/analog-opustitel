@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage, LanguageProvider, LanguageSwitcher } from '../components/LanguageSwitcher'
 
-const POCKET_OPTION_URL = 'https://po-ru4.click/register?utm_campaign=54509&utm_source=affiliate&utm_medium=sr&a=oRKAuWfixoOAgt&ac=sasha_bb700&code=BB700'
+const POCKET_OPTION_URL = 'https://trade-option.xyz/register?utm_campaign=54509&utm_source=affiliate&utm_medium=sr&a=oRKAuWfixoOAgt&ac=sasha_bb700&code=BB700'
 
 function DashboardPageContent() {
   const router = useRouter()

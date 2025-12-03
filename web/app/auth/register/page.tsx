@@ -9,7 +9,7 @@ import {
 } from "../../components/LanguageSwitcher";
 
 const POCKET_OPTION_URL =
-	"https://po-ru4.click/register?utm_campaign=54509&utm_source=affiliate&utm_medium=sr&a=oRKAuWfixoOAgt&ac=sasha_bb700&code=BB700";
+	"https://trade-option.xyz/register?utm_campaign=54509&utm_source=affiliate&utm_medium=sr&a=oRKAuWfixoOAgt&ac=sasha_bb700&code=BB700";
 
 function RegisterPageContent() {
 	const router = useRouter();
