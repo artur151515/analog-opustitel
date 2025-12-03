@@ -42,10 +42,8 @@ async def pocket_option_postback(
             conf = data.get("conf")
             ftd = data.get("ftd")
             dep = data.get("dep")
-            a = data.get("a")
-            ac = data.get("ac")
 
-            logger.info(f"Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}")
+            logger.info(f"Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}, reg: {reg}, ftd: {ftd}, dep: {dep}")
 
             # Определяем действие (поддерживаем и "1"/"0" и "true"/"false")
             action = None
@@ -90,27 +88,30 @@ async def pocket_option_postback(
                 logger.info(f"User {user.id} email confirmed")
 
             elif action in ["first_deposit", "deposit"]:
-                user.has_min_deposit = True
-
                 # Сохраняем сумму депозита и общую сумму
+                deposit_amount = 0.0
+                total_amount = 0.0
+
                 if sumdep:
                     try:
-                        sum_deposit = float(sumdep)
-                        logger.info(f"Deposit amount: {sum_deposit}")
+                        deposit_amount = float(sumdep)
+                        logger.info(f"Deposit amount: {deposit_amount}")
                     except (ValueError, TypeError):
                         logger.warning(f"Invalid sumdep value: {sumdep}")
 
                 if totaldep:
                     try:
-                        total_deposit = float(totaldep)
-                        user.pocket_option_balance = total_deposit
-                        logger.info(f"Total deposit/balance: {total_deposit}")
-
-                        # Проверяем минимальный депозит (>= 10 USD)
-                        if total_deposit >= 10.0:
-                            user.has_min_deposit = True
+                        total_amount = float(totaldep)
+                        user.pocket_option_balance = total_amount
+                        logger.info(f"Total deposit/balance: {total_amount}")
                     except (ValueError, TypeError):
                         logger.warning(f"Invalid totaldep value: {totaldep}")
+
+                # Проверяем минимальный депозит (>= 10 USD) по общей сумме или текущему депозиту
+                check_amount = total_amount if total_amount > 0 else deposit_amount
+                if check_amount >= 10.0:
+                    user.has_min_deposit = True
+                    logger.info(f"User {user.id} meets minimum deposit requirement: {check_amount}")
 
                 logger.info(f"User {user.id} made {action}, sumdep: {sumdep}, totaldep: {totaldep}")
 
@@ -186,10 +187,8 @@ async def pocket_option_get_postback(
         conf = params.get("conf")
         ftd = params.get("ftd")
         dep = params.get("dep")
-        a = params.get("a")
-        ac = params.get("ac")
 
-        logger.info(f"GET Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}")
+        logger.info(f"GET Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}, reg: {reg}, ftd: {ftd}, dep: {dep}")
 
         # Определяем действие на основе параметров (поддерживаем и "1"/"0" и "true"/"false")
         action = None
@@ -233,27 +232,30 @@ async def pocket_option_get_postback(
             logger.info(f"User {user.id} email confirmed")
 
         elif action in ["first_deposit", "deposit"]:
-            user.has_min_deposit = True
-
             # Сохраняем сумму депозита и общую сумму
+            deposit_amount = 0.0
+            total_amount = 0.0
+
             if sumdep:
                 try:
-                    sum_deposit = float(sumdep)
-                    logger.info(f"Deposit amount: {sum_deposit}")
+                    deposit_amount = float(sumdep)
+                    logger.info(f"Deposit amount: {deposit_amount}")
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid sumdep value: {sumdep}")
 
             if totaldep:
                 try:
-                    total_deposit = float(totaldep)
-                    user.pocket_option_balance = total_deposit
-                    logger.info(f"Total deposit/balance: {total_deposit}")
-
-                    # Проверяем минимальный депозит (>= 10 USD)
-                    if total_deposit >= 10.0:
-                        user.has_min_deposit = True
+                    total_amount = float(totaldep)
+                    user.pocket_option_balance = total_amount
+                    logger.info(f"Total deposit/balance: {total_amount}")
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid totaldep value: {totaldep}")
+
+            # Проверяем минимальный депозит (>= 10 USD) по общей сумме или текущему депозиту
+            check_amount = total_amount if total_amount > 0 else deposit_amount
+            if check_amount >= 10.0:
+                user.has_min_deposit = True
+                logger.info(f"User {user.id} meets minimum deposit requirement: {check_amount}")
 
             logger.info(f"User {user.id} made {action}, sumdep: {sumdep}, totaldep: {totaldep}")
 
