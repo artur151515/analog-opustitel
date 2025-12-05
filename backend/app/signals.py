@@ -18,18 +18,13 @@ def create_signal(
     expire_at: float,
     timestamp: Optional[float] = None
 ) -> Signal:
-    """
-    Создает новый сигнал в базе данных
-    """
     try:
-        # Находим или создаем символ
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             symbol = Symbol(name=symbol_name)
             db.add(symbol)
-            db.flush()  # Получаем ID символа
+            db.flush()
         
-        # Создаем сигнал
         signal = Signal(
             symbol_id=symbol.id,
             tf=timeframe,
@@ -45,7 +40,6 @@ def create_signal(
         
         logger.info(f"Created signal: {symbol_name} {timeframe} {direction} at {enter_at}")
         
-        # Обновляем статистику
         update_rolling_stats(db, symbol_name, timeframe)
         
         return signal
@@ -60,24 +54,17 @@ def update_rolling_stats(
     symbol_name: str,
     timeframe: str
 ) -> None:
-    """
-    Обновляет скользящую статистику для символа и таймфрейма
-    """
     try:
-        # Получаем символ
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             return
         
-        # Периоды для статистики (в часах)
-        periods = [24, 168, 720]  # 1 день, 1 неделя, 1 месяц
+        periods = [24, 168, 720]
         
         for period_hours in periods:
-            # Время начала периода
             period_start = datetime.now() - timedelta(hours=period_hours)
             period_timestamp = period_start.timestamp()
             
-            # Получаем сигналы за период
             signals = db.query(Signal).filter(
                 and_(
                     Signal.symbol_id == symbol.id,
@@ -89,12 +76,10 @@ def update_rolling_stats(
             if not signals:
                 continue
             
-            # Подсчитываем статистику
             total_signals = len(signals)
             up_signals = len([s for s in signals if s.direction == 'up'])
             down_signals = len([s for s in signals if s.direction == 'down'])
             
-            # Находим или создаем запись статистики
             stats = db.query(StatsRolling).filter(
                 and_(
                     StatsRolling.symbol_id == symbol.id,
@@ -111,7 +96,6 @@ def update_rolling_stats(
                 )
                 db.add(stats)
             
-            # Обновляем статистику
             stats.total_signals = total_signals
             stats.up_signals = up_signals
             stats.down_signals = down_signals
@@ -131,9 +115,6 @@ def get_latest_signal(
     symbol_name: str,
     timeframe: str
 ) -> Optional[Signal]:
-    """
-    Получает последний сигнал для символа и таймфрейма
-    """
     try:
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
@@ -158,18 +139,13 @@ def get_signals_count(
     timeframe: str,
     hours: int = 24
 ) -> Dict[str, int]:
-    """
-    Получает количество сигналов за указанный период
-    """
     try:
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             return {"total": 0, "up": 0, "down": 0}
         
-        # Время начала периода
         period_start = datetime.now() - timedelta(hours=hours)
         
-        # Подсчитываем сигналы
         total = db.query(Signal).filter(
             and_(
                 Signal.symbol_id == symbol.id,

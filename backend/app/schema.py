@@ -15,7 +15,6 @@ class ResultEnum(str, Enum):
     SKIP = "SKIP"
 
 
-# TradingView Webhook Schemas
 class TVWebhookPayload(BaseModel):
     ts: int = Field(..., description="Unix timestamp in milliseconds")
     symbol: str = Field(..., description="Trading symbol (e.g., CADJPY)")
@@ -42,7 +41,6 @@ class TVWebhookResponse(BaseModel):
     signal_id: Optional[int] = None
 
 
-# API Response Schemas
 class SignalResponse(BaseModel):
     id: int
     symbol: str
@@ -86,7 +84,6 @@ class ErrorResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
-# Internal schemas
 class SignalCreate(BaseModel):
     symbol_id: int
     tf: str

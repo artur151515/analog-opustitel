@@ -48,14 +48,19 @@ services:
       dockerfile: Dockerfile
     container_name: visionoftrading-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://visionoftrading:password@postgres:5432/opustoshitel
+      - DATABASE_URL=postgresql://opustoshitel:password@postgres:5432/visionoftrading
       - REDIS_URL=redis://redis:6379
       - TV_WEBHOOK_SECRET=your-super-secret-webhook-key-change-this
       - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080,https://visionoftrading.com,http://visionoftrading.com
       - DEBUG=false
       - LOG_LEVEL=INFO
       - APP_VERSION=1.0.0
+      # Telegram Bot Settings from .env
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHAT_ID=${CHAT_ID}
       # SMTP Settings - Timeweb SMTP
       - SMTP_SERVER=smtp.timeweb.ru
       - SMTP_PORT=465

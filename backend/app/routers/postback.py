@@ -8,6 +8,7 @@ import logging
 from ..db import get_db
 from ..models import User, PostbackLog
 from ..config import settings
+from ..telegram_bot import telegram_bot
 
 router = APIRouter(prefix="/api/postback", tags=["postback"])
 logger = logging.getLogger(__name__)
@@ -106,13 +107,44 @@ async def handle_pocket_partners_postback(
                 user.pocket_option_id = trader_id
                 user.pocket_option_verified = True
                 logger.info(f"User {user.id} linked to trader_id {trader_id}")
+                
+                # Отправляем уведомление
+                await telegram_bot.notify_postback_received(
+                    event_type="POSTBACK_REG",
+                    user_email=user.email,
+                    trader_id=trader_id or "",
+                    amount=0.0
+                )
         
-        elif event == "ftd" or event == "dep":
-            # Депозит - обновляем баланс
+        elif event == "ftd":
+            # Первый депозит
+            if sumdep:
+                user.pocket_option_balance = (user.pocket_option_balance or 0.0) + sumdep
+                user.has_min_deposit = user.pocket_option_balance >= 10
+                logger.info(f"User {user.id} FTD: {sumdep}, new balance: {user.pocket_option_balance}")
+                
+                # Отправляем уведомление
+                await telegram_bot.notify_postback_received(
+                    event_type="POSTBACK_FTD",
+                    user_email=user.email,
+                    trader_id=trader_id or "",
+                    amount=sumdep or 0.0
+                )
+        
+        elif event == "dep":
+            # Повторный депозит
             if sumdep:
                 user.pocket_option_balance = (user.pocket_option_balance or 0.0) + sumdep
                 user.has_min_deposit = user.pocket_option_balance >= 10
                 logger.info(f"User {user.id} deposit: {sumdep}, new balance: {user.pocket_option_balance}")
+                
+                # Отправляем уведомление
+                await telegram_bot.notify_postback_received(
+                    event_type="POSTBACK_DEP",
+                    user_email=user.email,
+                    trader_id=trader_id or "",
+                    amount=sumdep or 0.0
+                )
         
         elif event == "wdr":
             # Вывод - уменьшаем баланс если обработан
@@ -120,6 +152,25 @@ async def handle_pocket_partners_postback(
                 user.pocket_option_balance = max(0, (user.pocket_option_balance or 0.0) - wdr_sum)
                 user.has_min_deposit = user.pocket_option_balance >= 10
                 logger.info(f"User {user.id} withdrawal: {wdr_sum}, new balance: {user.pocket_option_balance}")
+                
+                # Отправляем уведомление
+                await telegram_bot.notify_postback_received(
+                    event_type="POSTBACK_WDR",
+                    user_email=user.email,
+                    trader_id=trader_id or "",
+                    amount=wdr_sum or 0.0
+                )
+        
+        elif event == "commission":
+            # Комиссия
+            if commission:
+                # Отправляем уведомление
+                await telegram_bot.notify_postback_received(
+                    event_type="POSTBACK_COMMISSION",
+                    user_email=user.email,
+                    trader_id=trader_id or "",
+                    amount=commission or 0.0
+                )
         
         db.commit()
     

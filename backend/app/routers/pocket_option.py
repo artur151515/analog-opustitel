@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models.user import User
 from .auth import get_current_user
+from ..activity_logger import log_balance_update, log_important_action
 from typing import Optional
 import requests
 import logging
@@ -42,8 +43,10 @@ async def pocket_option_postback(
             conf = data.get("conf")
             ftd = data.get("ftd")
             dep = data.get("dep")
+            a = data.get("a")
+            ac = data.get("ac")
 
-            logger.info(f"Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}, reg: {reg}, ftd: {ftd}, dep: {dep}")
+            logger.info(f"Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}")
 
             # Определяем действие (поддерживаем и "1"/"0" и "true"/"false")
             action = None
@@ -88,30 +91,33 @@ async def pocket_option_postback(
                 logger.info(f"User {user.id} email confirmed")
 
             elif action in ["first_deposit", "deposit"]:
-                # Сохраняем сумму депозита и общую сумму
-                deposit_amount = 0.0
-                total_amount = 0.0
+                user.has_min_deposit = True
+                old_balance = user.pocket_option_balance or 0.0
 
+                # Сохраняем сумму депозита и общую сумму
                 if sumdep:
                     try:
-                        deposit_amount = float(sumdep)
-                        logger.info(f"Deposit amount: {deposit_amount}")
+                        sum_deposit = float(sumdep)
+                        logger.info(f"Deposit amount: {sum_deposit}")
                     except (ValueError, TypeError):
                         logger.warning(f"Invalid sumdep value: {sumdep}")
 
                 if totaldep:
                     try:
-                        total_amount = float(totaldep)
-                        user.pocket_option_balance = total_amount
-                        logger.info(f"Total deposit/balance: {total_amount}")
+                        total_deposit = float(totaldep)
+                        user.pocket_option_balance = total_deposit
+                        logger.info(f"Total deposit/balance: {total_deposit}")
+
+                        # Проверяем минимальный депозит (>= 10 USD)
+                        if total_deposit >= 10.0:
+                            user.has_min_deposit = True
+                        
+                        # Логируем пополнение баланса
+                        amount_diff = total_deposit - old_balance
+                        if amount_diff > 0:
+                            await log_balance_update(db, user, old_balance, total_deposit, amount_diff)
                     except (ValueError, TypeError):
                         logger.warning(f"Invalid totaldep value: {totaldep}")
-
-                # Проверяем минимальный депозит (>= 10 USD) по общей сумме или текущему депозиту
-                check_amount = total_amount if total_amount > 0 else deposit_amount
-                if check_amount >= 10.0:
-                    user.has_min_deposit = True
-                    logger.info(f"User {user.id} meets minimum deposit requirement: {check_amount}")
 
                 logger.info(f"User {user.id} made {action}, sumdep: {sumdep}, totaldep: {totaldep}")
 
@@ -187,8 +193,10 @@ async def pocket_option_get_postback(
         conf = params.get("conf")
         ftd = params.get("ftd")
         dep = params.get("dep")
+        a = params.get("a")
+        ac = params.get("ac")
 
-        logger.info(f"GET Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}, reg: {reg}, ftd: {ftd}, dep: {dep}")
+        logger.info(f"GET Postback params - click_id: {click_id}, site_id: {site_id}, trader_id: {trader_id}, sumdep: {sumdep}, totaldep: {totaldep}")
 
         # Определяем действие на основе параметров (поддерживаем и "1"/"0" и "true"/"false")
         action = None
@@ -232,30 +240,33 @@ async def pocket_option_get_postback(
             logger.info(f"User {user.id} email confirmed")
 
         elif action in ["first_deposit", "deposit"]:
-            # Сохраняем сумму депозита и общую сумму
-            deposit_amount = 0.0
-            total_amount = 0.0
+            user.has_min_deposit = True
+            old_balance = user.pocket_option_balance or 0.0
 
+            # Сохраняем сумму депозита и общую сумму
             if sumdep:
                 try:
-                    deposit_amount = float(sumdep)
-                    logger.info(f"Deposit amount: {deposit_amount}")
+                    sum_deposit = float(sumdep)
+                    logger.info(f"Deposit amount: {sum_deposit}")
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid sumdep value: {sumdep}")
 
             if totaldep:
                 try:
-                    total_amount = float(totaldep)
-                    user.pocket_option_balance = total_amount
-                    logger.info(f"Total deposit/balance: {total_amount}")
+                    total_deposit = float(totaldep)
+                    user.pocket_option_balance = total_deposit
+                    logger.info(f"Total deposit/balance: {total_deposit}")
+
+                    # Проверяем минимальный депозит (>= 10 USD)
+                    if total_deposit >= 10.0:
+                        user.has_min_deposit = True
+                    
+                    # Логируем пополнение баланса
+                    amount_diff = total_deposit - old_balance
+                    if amount_diff > 0:
+                        await log_balance_update(db, user, old_balance, total_deposit, amount_diff)
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid totaldep value: {totaldep}")
-
-            # Проверяем минимальный депозит (>= 10 USD) по общей сумме или текущему депозиту
-            check_amount = total_amount if total_amount > 0 else deposit_amount
-            if check_amount >= 10.0:
-                user.has_min_deposit = True
-                logger.info(f"User {user.id} meets minimum deposit requirement: {check_amount}")
 
             logger.info(f"User {user.id} made {action}, sumdep: {sumdep}, totaldep: {totaldep}")
 
@@ -362,6 +373,62 @@ async def check_balance(
             "pocket_option_id": pocket_option_id
         }
 
+    except Exception as e:
+        logger.error(f"Error checking balance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/check-balance-real/{pocket_option_id}")
+async def check_balance_real(
+    pocket_option_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Проверка баланса пользователя в Pocket Option через реальный API
+    """
+    try:
+        # Обращение к API Pocket Option для проверки баланса
+        api_url = f"https://pocketoptions.com/api/balance/{pocket_option_id}"
+        
+        logger.info(f"Checking balance for Pocket Option ID: {pocket_option_id}")
+        
+        response = requests.get(
+            api_url,
+            headers={
+                "User-Agent": "VisionOfTrading/1.0",
+                "Accept": "application/json"
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            balance_data = response.json()
+            logger.info(f"Successfully retrieved balance: {balance_data}")
+        else:
+            logger.error(f"API returned status {response.status_code}: {response.text}")
+            raise Exception(f"Pocket Option API returned status {response.status_code}")
+
+        # Обновляем баланс в базе данных
+        balance_value = float(balance_data.get("balance", 0.0))
+        current_user.pocket_option_balance = balance_value
+        
+        # Проверяем минимальный депозит
+        if balance_value >= 10.0:
+            current_user.has_min_deposit = True
+            
+        db.commit()
+
+        return {
+            "status": "success",
+            "balance": balance_value,
+            "currency": balance_data.get("currency", "USD"),
+            "last_updated": balance_data.get("last_updated"),
+            "pocket_option_id": pocket_option_id
+        }
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error checking balance: {e}")
+        raise HTTPException(status_code=503, detail="Failed to connect to Pocket Option API")
     except Exception as e:
         logger.error(f"Error checking balance: {e}")
         raise HTTPException(status_code=500, detail=str(e))

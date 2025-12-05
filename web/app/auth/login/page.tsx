@@ -47,7 +47,7 @@ function LoginPageContent() {
 			if (response.ok) {
 				const data = await response.json();
 				localStorage.setItem(
-					"token",
+					"auth_token",
 					data.access_token,
 				);
 

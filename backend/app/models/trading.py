@@ -13,7 +13,6 @@ class Symbol(Base):
     name = Column(String(20), unique=True, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
     signals = relationship("Signal", back_populates="symbol")
     stats = relationship("StatsRolling", back_populates="symbol")
 
@@ -23,20 +22,18 @@ class Signal(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     symbol_id = Column(Integer, ForeignKey("symbols.id"), nullable=False)
-    tf = Column(String(10), nullable=False)  # timeframe
-    ts = Column(DateTime(timezone=True), nullable=False)  # timestamp from TradingView
+    tf = Column(String(10), nullable=False)
+    ts = Column(DateTime(timezone=True), nullable=False)
     direction = Column(String(10), nullable=False)
     enter_at = Column(DateTime(timezone=True), nullable=False)
     expire_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Constraints
     __table_args__ = (
         CheckConstraint("direction IN ('UP', 'DOWN')", name="check_direction"),
         UniqueConstraint("symbol_id", "tf", "ts", name="unique_signal"),
     )
     
-    # Relationships
     symbol = relationship("Symbol", back_populates="signals")
     verdicts = relationship("Verdict", back_populates="signal")
 
@@ -49,12 +46,10 @@ class Verdict(Base):
     result = Column(String(10), nullable=False)
     settled_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Constraints
     __table_args__ = (
         CheckConstraint("result IN ('WIN', 'LOSS', 'SKIP')", name="check_result"),
     )
     
-    # Relationships
     signal = relationship("Signal", back_populates="verdicts")
 
 
@@ -70,16 +65,14 @@ class StatsRolling(Base):
     wins = Column(Integer, nullable=False, default=0)
     losses = Column(Integer, nullable=False, default=0)
     skips = Column(Integer, nullable=False, default=0)
-    break_even_rate = Column(Float, nullable=False, default=0.5405)  # 54.05%
+    break_even_rate = Column(Float, nullable=False, default=0.5405)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Constraints
     __table_args__ = (
         UniqueConstraint("symbol_id", "tf", "window", name="unique_stats"),
     )
     
-    # Relationships
     symbol = relationship("Symbol", back_populates="stats")
 
 
-# User model moved to user.py to avoid conflicts
+

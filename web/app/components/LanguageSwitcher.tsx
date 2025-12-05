@@ -98,6 +98,14 @@ const translations: Translations = {
 		ru: "Отказ от ответственности",
 		en: "Disclaimer",
 	},
+	logout: {
+		ru: "Выйти из системы",
+		en: "Logout",
+	},
+	logout_btn: {
+		ru: "ВЫЙТИ",
+		en: "LOGOUT",
+	},
 };
 
 export type TranslateOptions = {
@@ -161,6 +169,7 @@ export const LanguageSwitcher: React.FC = () => {
 	const { language, setLanguage, translate } =
 		useLanguage();
 	const [isAdmin, setIsAdmin] = useState(false);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
 
 	const toggleAdmin = () => {
 		setIsAdmin(!isAdmin);
@@ -170,11 +179,37 @@ export const LanguageSwitcher: React.FC = () => {
 		);
 	};
 
-	// Check admin mode on mount
+	const handleLogout = async () => {
+		try {
+			const token = localStorage.getItem("auth_token");
+			if (token) {
+				const response = await fetch("/api/auth/logout", {
+					method: "POST",
+					headers: {
+						"Authorization": `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				});
+				
+				if (response.ok) {
+					localStorage.removeItem("auth_token");
+					setIsLoggedIn(false);
+					window.location.href = "/auth/login";
+				}
+			}
+		} catch (error) {
+			console.error("Logout error:", error);
+		}
+	};
+
+	// Check admin mode and login status on mount
 	React.useEffect(() => {
 		const adminMode =
 			localStorage.getItem("admin_mode") === "true";
 		setIsAdmin(adminMode);
+		
+		const token = localStorage.getItem("auth_token");
+		setIsLoggedIn(!!token);
 	}, []);
 
 	const languages: {
@@ -197,10 +232,29 @@ export const LanguageSwitcher: React.FC = () => {
 
 	return (
 		<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 sm:flex-row sm:items-center">
+			{/* Logout Button */}
+			{isLoggedIn && (
+				<button
+					onClick={handleLogout}
+					className="group relative flex h-10 min-w-[100px] items-center justify-center rounded-xl border border-red-500/30 bg-gradient-to-br from-red-500/20 via-red-500/10 to-red-500/5 px-4 text-xs font-bold uppercase tracking-wide text-red-50 shadow-[0_15px_40px_-20px_rgba(239,68,68,0.7)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_25px_45px_-20px_rgba(239,68,68,0.7)]"
+					title={translate({
+						ru: "Выйти из системы",
+						en: "Logout",
+					})}
+				>
+					<span className="text-red-50">
+						{translate({
+							ru: "ВЫЙТИ",
+							en: "LOGOUT",
+						})}
+					</span>
+				</button>
+			)}
+			
 			{/* Admin Toggle */}
 			<button
 				onClick={toggleAdmin}
-				className={`group relative flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/20 via-white/10 to-white/5 px-4 text-xs font-bold uppercase tracking-wide text-slate-50 shadow-[0_15px_40px_-20px_rgba(15,23,42,0.7)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_25px_45px_-20px_rgba(59,130,246,0.7)] ${
+				className={`group relative flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/20 via-white/10 to-white/5 px-4 text-xs font-bold uppercase tracking-wide text-slate-50 shadow-[0_15px_40px_-20px_rgba(15,23,42,0.7)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_25px_45px_-20px_rgba(15,23,42,0.7)] ${
 					isAdmin
 						? "from-rose-500/40 via-rose-500/20 to-rose-500/10 text-rose-50"
 						: "from-slate-900/80 via-slate-900/60 to-slate-900/50 text-slate-200"

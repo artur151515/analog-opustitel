@@ -38,3 +38,4 @@ UNION SELECT 'signals', COUNT(*) FROM signals
 UNION SELECT 'verdicts', COUNT(*) FROM verdicts;
 "
 
+

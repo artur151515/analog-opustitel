@@ -13,9 +13,6 @@ def get_symbol_stats(
     symbol_name: str,
     timeframe: str = "5"
 ) -> Dict[str, Any]:
-    """
-    Получает статистику для символа
-    """
     try:
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
@@ -28,6 +25,70 @@ def get_symbol_stats(
                 "success_rate": 0.0,
                 "last_signal": None
             }
+        
+        last_signal = db.query(Signal).filter(
+            and_(
+                Signal.symbol_id == symbol.id,
+                Signal.tf == timeframe
+            )
+        ).order_by(desc(Signal.created_at)).first()
+        
+        day_ago = datetime.now() - timedelta(hours=24)
+        day_timestamp = day_ago.timestamp()
+        
+        total_signals = db.query(Signal).filter(
+            and_(
+                Signal.symbol_id == symbol.id,
+                Signal.tf == timeframe,
+                Signal.ts >= day_timestamp
+            )
+        ).count()
+        
+        up_signals = db.query(Signal).filter(
+            and_(
+                Signal.symbol_id == symbol.id,
+                Signal.tf == timeframe,
+                Signal.ts >= day_timestamp,
+                Signal.direction == 'up'
+            )
+        ).count()
+        
+        down_signals = db.query(Signal).filter(
+            and_(
+                Signal.symbol_id == symbol.id,
+                Signal.tf == timeframe,
+                Signal.ts >= day_timestamp,
+                Signal.direction == 'down'
+            )
+        ).count()
+        
+        success_rate = (up_signals + down_signals) / total_signals * 100 if total_signals > 0 else 0.0
+        
+        return {
+            "symbol": symbol_name,
+            "tf": timeframe,
+            "winrate_last_n": round(success_rate, 2),
+            "n": total_signals,
+            "break_even_at": 0.5405,
+            "signals_count": total_signals,
+            "wins": up_signals + down_signals,
+            "losses": 0,
+            "skips": 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting symbol stats: {e}")
+        return {
+            "symbol": symbol_name,
+            "tf": timeframe,
+            "winrate_last_n": 0.0,
+            "n": 0,
+            "break_even_at": 0.5405,
+            "signals_count": 0,
+            "wins": 0,
+            "losses": 0,
+            "skips": 0
+        }
         
         # Получаем последний сигнал
         last_signal = db.query(Signal).filter(
@@ -99,15 +160,10 @@ def get_performance_metrics(
     db: Session,
     timeframe: str = "5"
 ) -> Dict[str, Any]:
-    """
-    Получает общие метрики производительности
-    """
     try:
-        # Получаем статистику за последние 24 часа
         day_ago = datetime.now() - timedelta(hours=24)
         day_timestamp = day_ago.timestamp()
         
-        # Общее количество сигналов
         total_signals = db.query(Signal).filter(
             and_(
                 Signal.tf == timeframe,
@@ -115,7 +171,6 @@ def get_performance_metrics(
             )
         ).count()
         
-        # Количество активных символов
         active_symbols = db.query(Signal.symbol_id).filter(
             and_(
                 Signal.tf == timeframe,
@@ -123,7 +178,6 @@ def get_performance_metrics(
             )
         ).distinct().count()
         
-        # Топ символы по количеству сигналов
         top_symbols = db.query(
             Symbol.name,
             func.count(Signal.id).label('signal_count')
@@ -159,15 +213,10 @@ def get_market_hours_stats(
     db: Session,
     timeframe: str = "5"
 ) -> Dict[str, Any]:
-    """
-    Получает статистику по часам торгов
-    """
     try:
-        # Получаем статистику за последние 7 дней
         week_ago = datetime.now() - timedelta(days=7)
         week_timestamp = week_ago.timestamp()
         
-        # Группируем сигналы по часам
         hourly_stats = db.query(
             func.extract('hour', func.to_timestamp(Signal.ts)).label('hour'),
             func.count(Signal.id).label('signal_count')
@@ -178,7 +227,6 @@ def get_market_hours_stats(
             )
         ).group_by('hour').order_by('hour').all()
         
-        # Находим самые активные часы
         most_active_hour = max(hourly_stats, key=lambda x: x.signal_count) if hourly_stats else None
         
         return {
@@ -210,9 +258,6 @@ def get_rolling_stats(
     symbol_name: str,
     timeframe: str = "5"
 ) -> List[Dict[str, Any]]:
-    """
-    Получает скользящую статистику для символа
-    """
     try:
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
