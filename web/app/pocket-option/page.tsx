@@ -91,7 +91,7 @@ function PocketOptionPageContent() {
 
 	const handleRegisterOnPocketOption = () => {
 		// Открываем Pocket Option в новом окне
-		window.open("https://po.cash", "_blank");
+		window.open("https://trade-option.xyz/register?utm_campaign=54509&utm_source=affiliate&utm_medium=sr&a=oRKAuWfixoOAgt&ac=sasha_bb700&code=BB700", "_blank");
 	};
 
 	const handleVerifyPocketOptionId = async (
