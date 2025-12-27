@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление сервером</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .clean-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .clean-btn:hover {
+            background-color: #d32f2f;
+        }
+        .restart-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .restart-btn:hover {
+            background-color: #f57c00;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Управление сервером</h1>
+        
+        <div class="status" id="status">
+            ✅ Система в норме. Trigger файл присутствует.
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Внимание!</strong><br>
+            • <strong>Очистка сервера</strong> удалит все данные, контейнеры и образы Docker<br>
+            • <strong>Перезапуск сервера</strong> перезапустит все Docker контейнеры<br>
+            • Действия необратимы!
+        </div>
+
+        <button class="button clean-btn" onclick="cleanServer()">
+            🗑️ Очистить сервер
+        </button>
+
+        <button class="button restart-btn" onclick="restartServer()">
+            🔄 Перезапустить сервер
+        </button>
+
+        <h3>📄 Содержимое trigger файла:</h3>
+        <div class="code" id="triggerContent">Загрузка...</div>
+    </div>
+
+    <script>
+        // Загрузка содержимого trigger файла
+        fetch('/trigger-content')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('triggerContent').textContent = data;
+            })
+            .catch(error => {
+                document.getElementById('triggerContent').textContent = 'Ошибка загрузки: ' + error;
+            });
+
+        // Проверка статуса системы
+        function checkStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusEl = document.getElementById('status');
+                    if (data.trigger_exists) {
+                        statusEl.innerHTML = '✅ Система в норме. Trigger файл присутствует.';
+                        statusEl.style.background = '#e8f5e8';
+                        statusEl.style.borderLeftColor = '#4caf50';
+                    } else {
+                        statusEl.innerHTML = '❌ ОПАСНОСТЬ! Trigger файл удален. Очистка активирована!';
+                        statusEl.style.background = '#ffebee';
+                        statusEl.style.borderLeftColor = '#f44336';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = '⚠️ Не удалось проверить статус: ' + error;
+                });
+        }
+
+        // Очистка сервера
+        function cleanServer() {
+            if (!confirm('⚠️ ВЫ УВЕРЕНЫ?\n\nЭто действие удалит:\n• Все Docker контейнеры\n• Все Docker образы\n• Все файлы проекта\n• Остановит сервисы\n\nДействие необратимо!')) {
+                return;
+            }
+
+            if (!confirm('🔥 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ 🔥\n\nВы действительно хотите очистить весь сервер?')) {
+                return;
+            }
+
+            fetch('/api/clean', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert('✅ Команда очистки отправлена. Система будет очищена при следующей проверке watchdog.');
+                    checkStatus();
+                })
+                .catch(error => {
+                    alert('❌ Ошибка: ' + error);
+                });
+        }
+
+        // Перезапуск сервера
+        function restartServer() {
+            if (!confirm('🔄 Перезапустить все Docker контейнеры?')) {
+                return;
+            }
+
+            fetch('/api/restart', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert('✅ Команда перезапуска отправлена.');
+                    setTimeout(() => {
+                        alert('🔄 Сервер перезапускается...');
+                    }, 2000);
+                })
+                .catch(error => {
+                    alert('❌ Ошибка: ' + error);
+                });
+        }
+
+        // Проверяем статус при загрузке
+        checkStatus();
+        
+        // Обновляем статус каждые 30 секунд
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>

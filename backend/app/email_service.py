@@ -73,8 +73,8 @@ def _send_email_smtp(to_email: str, subject: str, html_body: str, text_body: str
 async def send_verification_email(email: str, verification_token: str) -> bool:
     """Send email verification link to user"""
     # Check if SMTP server is configured
-    if not settings.smtp_server:
-        logger.warning(f"SMTP server not configured, skipping email to {email}")
+    if not settings.smtp_server or not settings.smtp_username or not settings.smtp_password:
+        logger.warning(f"SMTP server not fully configured (server: {settings.smtp_server}, username: {bool(settings.smtp_username)}, password: {bool(settings.smtp_password)}), skipping email to {email}")
         return False
         
     try:
@@ -161,8 +161,8 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
 async def send_password_reset_email(email: str, reset_token: str) -> bool:
     """Send password reset link to user"""
     # Check if SMTP server is configured
-    if not settings.smtp_server:
-        logger.warning(f"SMTP server not configured, skipping email to {email}")
+    if not settings.smtp_server or not settings.smtp_username or not settings.smtp_password:
+        logger.warning(f"SMTP server not fully configured (server: {settings.smtp_server}, username: {bool(settings.smtp_username)}, password: {bool(settings.smtp_password)}), skipping email to {email}")
         return False
         
     try:

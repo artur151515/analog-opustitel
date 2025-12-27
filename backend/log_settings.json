@@ -1,0 +1,46 @@
+{
+  "USER_LOGIN": {
+    "enabled": true,
+    "display_name": "Вход пользователя"
+  },
+  "USER_LOGOUT": {
+    "enabled": true,
+    "display_name": "Выход пользователя"
+  },
+  "USER_REGISTER": {
+    "enabled": true,
+    "display_name": "Регистрация"
+  },
+  "EMAIL_VERIFIED": {
+    "enabled": true,
+    "display_name": "Подтверждение email"
+  },
+  "PASSWORD_CHANGED": {
+    "enabled": true,
+    "display_name": "Смена пароля"
+  },
+  "POCKET_OPTION_VERIFIED": {
+    "enabled": true,
+    "display_name": "Подтверждение Pocket Option"
+  },
+  "SIGNAL_GENERATED": {
+    "enabled": true,
+    "display_name": "Генерация сигнала"
+  },
+  "SIGNAL_VIEWED": {
+    "enabled": true,
+    "display_name": "Просмотр сигнала"
+  },
+  "VISITOR": {
+    "enabled": true,
+    "display_name": "Посетитель сайта"
+  },
+  "BALANCE_UPDATE": {
+    "enabled": true,
+    "display_name": "Пополнение баланса"
+  },
+  "IMPORTANT_ACTION": {
+    "enabled": true,
+    "display_name": "Важное действие"
+  }
+}

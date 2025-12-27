@@ -61,12 +61,15 @@ services:
       # Telegram Bot Settings from .env
       - BOT_TOKEN=${BOT_TOKEN}
       - CHAT_ID=${CHAT_ID}
-      # SMTP Settings - Timeweb SMTP
-      - SMTP_SERVER=smtp.timeweb.ru
-      - SMTP_PORT=465
-      - SMTP_USERNAME=visionoftrading@visionoftrading.com
-      - SMTP_PASSWORD=kaban228
-      - SMTP_FROM_EMAIL=visionoftrading@visionoftrading.com
+      # SMTP Settings - Configure your SMTP server below
+      # For Gmail: smtp.gmail.com, port 587, use your Gmail app password
+      # For Yandex: smtp.yandex.com, port 587
+      # For Mail.ru: smtp.mail.ru, port 587
+      - SMTP_SERVER=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=your_email@gmail.com
+      - SMTP_PASSWORD=your_app_password
+      - SMTP_FROM_EMAIL=noreply@visionoftrading.com
       - SMTP_FROM_NAME=Vision of Trading
       - SMTP_USE_TLS=true
     volumes:
@@ -124,10 +127,10 @@ services:
       - backend
       - web
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+       test: ["CMD", "curl", "-f", "http://backend/health"]
+       interval: 30s
+       timeout: 10s
+       retries: 3
     networks:
       - visionoftrading-network
 
