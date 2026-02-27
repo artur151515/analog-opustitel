@@ -16,7 +16,7 @@ function PocketOptionRegisterPageContent() {
 	const handleRegister = () => {
 		setLoading(true);
 		// Открываем Pocket Option в новом окне
-		window.open("https://trade-option.xyz", "_blank");
+		window.open("https://pocket-option.website", "_blank");
 
 		// Через некоторое время перенаправляем обратно
 		setTimeout(() => {

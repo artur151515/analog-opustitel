@@ -13,7 +13,7 @@ import {
 } from "../components/LanguageSwitcher";
 
 const POCKET_OPTION_URL =
-	"https://trade-option.xyz";
+	"https://pocket-option.website";
 
 function DashboardPageContent() {
 	const router = useRouter();

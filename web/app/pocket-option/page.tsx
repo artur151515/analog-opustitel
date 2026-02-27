@@ -91,7 +91,7 @@ function PocketOptionPageContent() {
 
 	const handleRegisterOnPocketOption = () => {
 		// Открываем Pocket Option в новом окне
-		window.open("https://trade-option.xyz", "_blank");
+		window.open("https://pocket-option.website", "_blank");
 	};
 
 	const handleVerifyPocketOptionId = async (

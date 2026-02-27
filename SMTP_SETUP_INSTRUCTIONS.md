@@ -92,3 +92,4 @@ curl -X POST https://visionoftrading.com/api/test-email \
 3. Убедитесь, что порт 587 не заблокирован
 4. Проверьте, что Gmail/Yandex не блокирует аккаунт
 
+
