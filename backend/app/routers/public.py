@@ -12,6 +12,7 @@ from ..signals import get_latest_signal
 from ..stats import get_symbol_stats, get_performance_metrics, get_market_hours_stats
 from ..config import settings
 from ..activity_logger import log_important_action
+from ..models.trading import StatsRolling, Symbol
 
 logger = logging.getLogger(__name__)
 
@@ -39,22 +40,38 @@ async def get_signal(
         if not signal:
             return None
         
+        # Calculate confidence from stats winrate
+        confidence = signal.confidence
+        if confidence is None:
+            try:
+                stats_record = db.query(StatsRolling).filter(
+                    StatsRolling.symbol_id == signal.symbol_id,
+                    StatsRolling.tf == signal.tf
+                ).order_by(StatsRolling.updated_at.desc()).first()
+                if stats_record and stats_record.total_signals > 0:
+                    confidence = round(stats_record.winrate, 4)
+                else:
+                    confidence = 0.75  # Default for new pairs
+            except Exception:
+                confidence = 0.75
+
         signal_data = {
             'id': signal.id,
             'symbol': signal.symbol.name,
             'tf': signal.tf,
             'direction': signal.direction,
+            'confidence': confidence,
             'enter_at': signal.enter_at.isoformat(),
             'expire_at': signal.expire_at.isoformat(),
             'generated_at': signal.created_at.isoformat()
         }
-        
+
         redis_client.setex(
             cache_key,
             settings.redis_cache_ttl,
             json.dumps(signal_data)
         )
-        
+
         response = SignalResponse(
             id=signal.id,  # type: ignore
             symbol=signal.symbol.name,  # type: ignore
@@ -63,7 +80,7 @@ async def get_signal(
             enter_at=signal.enter_at,  # type: ignore
             expire_at=signal.expire_at,  # type: ignore
             generated_at=signal.created_at,  # type: ignore
-            confidence=0.5
+            confidence=confidence
         )
         
         try:
@@ -191,7 +208,7 @@ async def root():
     return {
         "name": settings.app_name,
         "version": settings.app_version,
-        "description": "Vision of Trading Trading Signals API",
+        "description": "ProfitHunter Trading Signals API",
         "endpoints": {
             "webhook": "/api/tv-hook",
             "signal": "/api/signal",

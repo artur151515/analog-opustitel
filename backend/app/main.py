@@ -43,9 +43,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to create database tables: {e}")
         raise
-    
+
+    # Auto-start signal generator
+    try:
+        from .routers.signal_generator import signal_generator
+        await signal_generator.start()
+        logger.info("Signal generator auto-started")
+    except Exception as e:
+        logger.warning(f"Failed to auto-start signal generator: {e}")
+
     yield
-    
+
+    # Stop signal generator on shutdown
+    try:
+        from .routers.signal_generator import signal_generator
+        await signal_generator.stop()
+    except Exception:
+        pass
+
     logger.info("Shutting down application")
 
 
@@ -68,7 +83,7 @@ app.add_middleware(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"] if settings.debug else ["localhost", "127.0.0.1", "visionoftrading.com", "www.visionoftrading.com"]
+    allowed_hosts=["*"] if settings.debug else ["localhost", "127.0.0.1", "visionoftrading.com", "www.visionoftrading.com", "proffithunter.com", "www.proffithunter.com"]
 )
 
 app.add_middleware(VisitorLoggingMiddleware)
@@ -110,6 +125,14 @@ try:
     app.include_router(log_settings_api.router)
 except:
     pass
+
+# Admin panel API
+try:
+    from .routers.admin import router as admin_router
+    app.include_router(admin_router)
+    logger.info("Added admin panel router")
+except ImportError as e:
+    logger.warning(f"Admin router not available: {e}")
 
 
 @app.exception_handler(HTTPException)

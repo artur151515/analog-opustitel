@@ -90,8 +90,8 @@ function PocketOptionPageContent() {
 	};
 
 	const handleRegisterOnPocketOption = () => {
-		// Открываем Pocket Option в новом окне
-		window.open("https://pocket-option.website", "_blank");
+		const url = `https://pocket-option.su?click_id=${user?.id}`;
+		window.open(url, "_blank");
 	};
 
 	const handleVerifyPocketOptionId = async (

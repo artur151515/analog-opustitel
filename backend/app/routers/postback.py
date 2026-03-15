@@ -120,7 +120,7 @@ async def handle_pocket_partners_postback(
             # Первый депозит
             if sumdep:
                 user.pocket_option_balance = (user.pocket_option_balance or 0.0) + sumdep
-                user.has_min_deposit = user.pocket_option_balance >= 10
+                user.has_min_deposit = user.pocket_option_balance >= 50
                 logger.info(f"User {user.id} FTD: {sumdep}, new balance: {user.pocket_option_balance}")
                 
                 # Отправляем уведомление
@@ -135,7 +135,7 @@ async def handle_pocket_partners_postback(
             # Повторный депозит
             if sumdep:
                 user.pocket_option_balance = (user.pocket_option_balance or 0.0) + sumdep
-                user.has_min_deposit = user.pocket_option_balance >= 10
+                user.has_min_deposit = user.pocket_option_balance >= 50
                 logger.info(f"User {user.id} deposit: {sumdep}, new balance: {user.pocket_option_balance}")
                 
                 # Отправляем уведомление
@@ -150,7 +150,7 @@ async def handle_pocket_partners_postback(
             # Вывод - уменьшаем баланс если обработан
             if wdr_sum and status == "processed":
                 user.pocket_option_balance = max(0, (user.pocket_option_balance or 0.0) - wdr_sum)
-                user.has_min_deposit = user.pocket_option_balance >= 10
+                user.has_min_deposit = user.pocket_option_balance >= 50
                 logger.info(f"User {user.id} withdrawal: {wdr_sum}, new balance: {user.pocket_option_balance}")
                 
                 # Отправляем уведомление

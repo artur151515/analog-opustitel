@@ -47,7 +47,7 @@ function LoginPageContent() {
 			if (response.ok) {
 				const data = await response.json();
 				localStorage.setItem(
-					"auth_token",
+					"token",
 					data.access_token,
 				);
 
@@ -74,24 +74,27 @@ function LoginPageContent() {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center px-6">
-			<div className="max-w-md w-full">
-				{/* Header */}
+		<div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--bg-primary)' }}>
+			<div className="max-w-sm w-full">
+				{/* Logo */}
 				<div className="text-center mb-8">
-					<h1 className="text-3xl font-light text-white tracking-tight mb-2">
-						Trade Vision
-					</h1>
-					<p className="text-gray-400 font-light text-sm">
-						{language === "ru"
-							? "Вход в систему"
-							: "Sign In"}
+					<div className="inline-flex items-center gap-2 mb-4">
+						<div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ background: 'var(--accent)' }}>
+							<svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+								<polyline points="3,17 8,11 13,14 21,6" stroke="#020a08" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+							</svg>
+						</div>
+						<span className="text-xl font-semibold" style={{ color: 'var(--text-bright)' }}>ProfitHunter</span>
+					</div>
+					<p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+						{language === "ru" ? "Вход в систему" : "Sign In"}
 					</p>
 				</div>
 
-				{/* Content */}
-				<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-8">
+				{/* Card */}
+				<div className="rounded-xl p-8" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-dim)' }}>
 					{error && (
-						<div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-light">
+						<div className="mb-6 p-3 rounded-lg text-sm" style={{ background: 'var(--red-dim)', border: '1px solid rgba(255,69,96,0.2)', color: 'var(--red)' }}>
 							{error}
 						</div>
 					)}
@@ -99,70 +102,29 @@ function LoginPageContent() {
 					<form onSubmit={handleLogin}>
 						<div className="space-y-4">
 							<div>
-								<label className="block text-sm font-light text-gray-400 mb-2">
-									{translate({
-										ru: "Электронная почта",
-										en: "Email",
-									})}
+								<label className="block text-xs mb-2 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+									{translate({ ru: "Email", en: "Email" })}
 								</label>
-								<input
-									type="email"
-									value={email}
-									onChange={(e) =>
-										setEmail(e.target.value)
-									}
-									required
-									className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-								/>
+								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input w-full" />
 							</div>
 							<div>
-								<label className="block text-sm font-light text-gray-400 mb-2">
-									{language === "ru"
-										? "Пароль"
-										: "Password"}
+								<label className="block text-xs mb-2 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+									{language === "ru" ? "Пароль" : "Password"}
 								</label>
-								<input
-									type="password"
-									value={password}
-									onChange={(e) =>
-										setPassword(e.target.value)
-									}
-									required
-									className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-								/>
+								<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input w-full" />
 							</div>
-							<button
-								type="submit"
-								disabled={loading}
-								className="w-full py-3 bg-white text-black rounded-lg font-light hover:bg-gray-100 transition-colors disabled:opacity-50"
-							>
-								{loading
-									? language === "ru"
-										? "Загрузка..."
-										: "Loading..."
-									: language === "ru"
-									? "Войти"
-									: "Sign In"}
+							<button type="submit" disabled={loading} className="btn-primary w-full py-3 mt-2" style={{ opacity: loading ? 0.6 : 1 }}>
+								{loading ? (language === "ru" ? "Загрузка..." : "Loading...") : (language === "ru" ? "Войти" : "Sign In")}
 							</button>
 						</div>
 					</form>
 				</div>
 
-				{/* Footer */}
-				<div className="mt-6 text-center">
-					<p className="text-gray-400 font-light text-sm">
-						{language === "ru"
-							? "Нет аккаунта?"
-							: "Don't have an account?"}{" "}
-						<Link
-							href="/auth/register"
-							className="text-white hover:text-gray-300"
-						>
-							{language === "ru"
-								? "Зарегистрироваться"
-								: "Sign Up"}
-						</Link>
-					</p>
+				<div className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+					{language === "ru" ? "Нет аккаунта?" : "No account?"}{" "}
+					<Link href="/auth/register" style={{ color: 'var(--accent)' }}>
+						{language === "ru" ? "Зарегистрироваться" : "Sign Up"}
+					</Link>
 				</div>
 			</div>
 		</div>

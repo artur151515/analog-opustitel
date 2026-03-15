@@ -309,11 +309,11 @@ async def can_access_signals(current_user: User = Depends(get_current_user)):
     balance = float(current_user.pocket_option_balance or current_user.balance or 0)  # type: ignore
     access_level = "none"
 
-    if balance >= 150:
+    if balance >= 200:
         access_level = "unlimited_all"
-    elif balance >= 50:
+    elif balance >= 100:
         access_level = "unlimited_main"
-    elif balance >= 10:
+    elif balance >= 50:
         access_level = "limited"
     else:
         access_level = "none"
@@ -337,7 +337,7 @@ def _get_access_message(access_level: str) -> str:
         "unlimited_all": "Безлимитные сигналы на все активы (основные + OTC)",
         "unlimited_main": "Безлимитные сигналы на основные валютные пары",
         "limited": "1 сигнал в день",
-        "none": "Недостаточно средств. Минимальный депозит: $10"
+        "none": "Недостаточно средств. Минимальный депозит: $50"
     }
     return messages.get(access_level, "")
 

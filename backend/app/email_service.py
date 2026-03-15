@@ -79,10 +79,10 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
         
     try:
         # Create verification URL
-        verification_url = f"https://visionoftrading.com/auth/verify-email?token={verification_token}"
+        verification_url = f"https://proffithunter.com/auth/verify-email?token={verification_token}"
         
         # Email template
-        subject = "Подтвердите ваш email - Vision of Trading"
+        subject = "Подтвердите ваш email - ProfitHunter"
         
         html_body = f"""
         <!DOCTYPE html>
@@ -110,7 +110,7 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>📈 Vision of Trading</h1>
+                    <h1>📈 ProfitHunter</h1>
                     <p>Подтверждение регистрации</p>
                 </div>
                 
@@ -131,7 +131,7 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
                 </div>
                 
                 <div class="footer">
-                    <p>(c) 2024 Vision of Trading. Все права защищены.</p>
+                    <p>(c) 2024 ProfitHunter. Все права защищены.</p>
                     <p>Если вы не регистрировались на нашем сайте, просто проигнорируйте это письмо.</p>
                 </div>
             </div>
@@ -140,7 +140,7 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
         """
         
         text_body = f"""
-        Добро пожаловать в Vision of Trading!
+        Добро пожаловать в ProfitHunter!
         
         Спасибо за регистрацию. Для завершения процесса регистрации, пожалуйста, подтвердите ваш email адрес.
         
@@ -148,7 +148,7 @@ async def send_verification_email(email: str, verification_token: str) -> bool:
         
         Ссылка действительна в течение 24 часов.
         
-        (c) 2024 Vision of Trading. Все права защищены.
+        (c) 2024 ProfitHunter. Все права защищены.
         """
         
         # Send email using standard SMTP
@@ -166,9 +166,9 @@ async def send_password_reset_email(email: str, reset_token: str) -> bool:
         return False
         
     try:
-        reset_url = f"https://visionoftrading.com/auth/reset-password?token={reset_token}"
+        reset_url = f"https://proffithunter.com/auth/reset-password?token={reset_token}"
         
-        subject = "Сброс пароля - Vision of Trading"
+        subject = "Сброс пароля - ProfitHunter"
         
         html_body = f"""
         <!DOCTYPE html>
@@ -196,7 +196,7 @@ async def send_password_reset_email(email: str, reset_token: str) -> bool:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>📈 Vision of Trading</h1>
+                    <h1>📈 ProfitHunter</h1>
                     <p>Сброс пароля</p>
                 </div>
                 
@@ -218,7 +218,7 @@ async def send_password_reset_email(email: str, reset_token: str) -> bool:
                 </div>
                 
                 <div class="footer">
-                    <p>(c) 2024 Vision of Trading. Все права защищены.</p>
+                    <p>(c) 2024 ProfitHunter. Все права защищены.</p>
                 </div>
             </div>
         </body>
@@ -226,7 +226,7 @@ async def send_password_reset_email(email: str, reset_token: str) -> bool:
         """
         
         text_body = f"""
-        Запрос на сброс пароля - Vision of Trading
+        Запрос на сброс пароля - ProfitHunter
         
         Вы запросили сброс пароля для вашего аккаунта.
         
@@ -236,7 +236,7 @@ async def send_password_reset_email(email: str, reset_token: str) -> bool:
         
         Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
         
-        (c) 2024 Vision of Trading. Все права защищены.
+        (c) 2024 ProfitHunter. Все права защищены.
         """
         
         # Send email using standard SMTP

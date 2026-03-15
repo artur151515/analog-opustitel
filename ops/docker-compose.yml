@@ -1,79 +1,64 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: visionoftrading-postgres
+    container_name: profithunter-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: visionoftrading
-      POSTGRES_USER: visionoftrading
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: profithunter
+      POSTGRES_USER: profithunter
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-PH_securepass_2025}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U visionoftrading"]
+      test: ["CMD-SHELL", "pg_isready -U profithunter"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - visionoftrading-network
+      - ph-network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: visionoftrading-redis
+    container_name: profithunter-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - visionoftrading-network
+      - ph-network
 
-  # FastAPI Backend
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: visionoftrading-backend
+    container_name: profithunter-backend
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
-      - DATABASE_URL=postgresql://opustoshitel:password@postgres:5432/visionoftrading
+      - DATABASE_URL=postgresql://profithunter:${DB_PASSWORD:-PH_securepass_2025}@postgres:5432/profithunter
       - REDIS_URL=redis://redis:6379
-      - TV_WEBHOOK_SECRET=your-super-secret-webhook-key-change-this
-      - CORS_ORIGINS_RAW=http://localhost:3000,http://localhost:8000,http://localhost:80,http://localhost:8080,https://visionoftrading.com,http://visionoftrading.com
-      - DEBUG=false
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-random-string}
+      - DEBUG=true
       - LOG_LEVEL=INFO
       - APP_VERSION=1.0.0
-      # Telegram Bot Settings from .env
-      - BOT_TOKEN=${BOT_TOKEN}
-      - CHAT_ID=${CHAT_ID}
-      # SMTP Settings - Configure your SMTP server below
-      # For Gmail: smtp.gmail.com, port 587, use your Gmail app password
-      # For Yandex: smtp.yandex.com, port 587
-      # For Mail.ru: smtp.mail.ru, port 587
-      - SMTP_SERVER=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USERNAME=your_email@gmail.com
-      - SMTP_PASSWORD=your_app_password
-      - SMTP_FROM_EMAIL=noreply@visionoftrading.com
-      - SMTP_FROM_NAME=Vision of Trading
+      - CORS_ORIGINS_RAW=https://proffithunter.com,http://proffithunter.com,http://localhost:3000
+      - BOT_TOKEN=${BOT_TOKEN:-}
+      - CHAT_ID=${CHAT_ID:-}
+      - SMTP_SERVER=${SMTP_SERVER:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=noreply@proffithunter.com
+      - SMTP_FROM_NAME=ProfitHunter
       - SMTP_USE_TLS=true
-    volumes:
-      - ../backend:/app
+      - POCKET_OPTION_PARTNER_ID=${POCKET_OPTION_PARTNER_ID:-}
+      - POCKET_OPTION_API_TOKEN=${POCKET_OPTION_API_TOKEN:-bTq2J8XiVdYJsWddHCEm}
     ports:
       - "8000:8000"
     depends_on:
@@ -81,63 +66,31 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     networks:
-      - visionoftrading-network
+      - ph-network
 
-  # Next.js Frontend
   web:
     build:
       context: ../web
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=https://visionoftrading.com
-    container_name: visionoftrading-web
+        - NEXT_PUBLIC_API_URL=https://proffithunter.com
+    container_name: profithunter-web
+    restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=https://visionoftrading.com
-      - NEXT_PUBLIC_APP_NAME=Vision of Trading
-    # ports:
-      # - "3000:3000"  # Закрыт для внешнего доступа, используется только через Nginx
-    depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - visionoftrading-network
-
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: visionoftrading-nginx
-    volumes:
-      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../nginx/static:/usr/share/nginx/html/static:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - NEXT_PUBLIC_API_URL=https://proffithunter.com
+      - NEXT_PUBLIC_APP_NAME=ProfitHunter
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:3000"
     depends_on:
       - backend
-      - web
-    healthcheck:
-       test: ["CMD", "curl", "-f", "http://backend/health"]
-       interval: 30s
-       timeout: 10s
-       retries: 3
     networks:
-      - visionoftrading-network
+      - ph-network
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  visionoftrading-network:
+  ph-network:
     driver: bridge

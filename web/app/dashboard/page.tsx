@@ -1,10 +1,6 @@
 "use client";
 
-import {
-	useState,
-	useEffect,
-	useCallback,
-} from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
 	useLanguage,
@@ -12,37 +8,22 @@ import {
 	LanguageSwitcher,
 } from "../components/LanguageSwitcher";
 
-const POCKET_OPTION_URL =
-	"https://pocket-option.website";
-
 function DashboardPageContent() {
 	const router = useRouter();
 	const { language } = useLanguage();
 	const [user, setUser] = useState<any>(null);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
-	const [
-		showChangePassword,
-		setShowChangePassword,
-	] = useState(false);
-	const [oldPassword, setOldPassword] =
-		useState("");
-	const [newPassword, setNewPassword] =
-		useState("");
-	const [accessStatus, setAccessStatus] =
-		useState<any>(null);
-	const [pocketOptionId, setPocketOptionId] =
-		useState("");
-	const [checkingBalance, setCheckingBalance] =
-		useState(false);
-	const [showPromoModal, setShowPromoModal] =
-		useState(false);
+	const [accessStatus, setAccessStatus] = useState<any>(null);
 
 	const apiUrl =
 		typeof window !== "undefined"
 			? `${window.location.protocol}//${window.location.host}/api`
-			: process.env.NEXT_PUBLIC_API_URL ||
-			  "https://visionoftrading.com/api";
+			: process.env.NEXT_PUBLIC_API_URL || "https://proffithunter.com/api";
+
+	// Determine if market is open (weekday) or OTC time (weekend)
+	const now = new Date();
+	const dayOfWeek = now.getUTCDay(); // 0=Sun, 6=Sat
+	const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
 	const fetchUserData = useCallback(async () => {
 		const token = localStorage.getItem("token");
@@ -52,207 +33,37 @@ function DashboardPageContent() {
 		}
 
 		try {
-			const response = await fetch(
-				`${apiUrl}/auth/me`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				},
-			);
+			const response = await fetch(`${apiUrl}/auth/me`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
 
 			if (response.ok) {
 				const data = await response.json();
 				setUser(data);
 
-				// Fetch access status
 				const accessResponse = await fetch(
 					`${apiUrl}/auth/can-access-signals`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					},
+					{ headers: { Authorization: `Bearer ${token}` } }
 				);
 
 				if (accessResponse.ok) {
-					const accessData =
-						await accessResponse.json();
+					const accessData = await accessResponse.json();
 					setAccessStatus(accessData);
-
-					// If no deposit and verified, show promo modal
-					if (
-						data.is_verified &&
-						data.pocket_option_verified &&
-						!accessData.can_access
-					) {
-						setShowPromoModal(true);
-					}
 				}
 			} else {
 				localStorage.removeItem("token");
 				router.push("/auth/login");
 			}
 		} catch (err) {
-			setError(
-				language === "ru"
-					? "Ошибка загрузки данных"
-					: "Error loading data",
-			);
+			console.error("Error loading data:", err);
 		} finally {
 			setLoading(false);
 		}
-	}, [router, apiUrl, language]);
+	}, [router, apiUrl]);
 
 	useEffect(() => {
 		fetchUserData();
 	}, [fetchUserData]);
-
-	const handleSubmitPocketId = async (
-		e: React.FormEvent,
-	) => {
-		e.preventDefault();
-		setError("");
-
-		if (!pocketOptionId.trim()) {
-			setError(
-				language === "ru"
-					? "Введите Pocket Option ID"
-					: "Enter Pocket Option ID",
-			);
-			return;
-		}
-
-		setLoading(true);
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`${apiUrl}/auth/verify-pocket-option`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({
-						pocket_option_id: pocketOptionId.trim(),
-					}),
-				},
-			);
-
-			if (response.ok) {
-				setPocketOptionId("");
-				await fetchUserData(); // Refresh user data
-			} else {
-				const data = await response.json();
-				setError(
-					data.detail ||
-						(language === "ru"
-							? "Ошибка верификации ID"
-							: "ID verification error"),
-				);
-			}
-		} catch (err) {
-			setError(
-				language === "ru"
-					? "Ошибка соединения"
-					: "Connection error",
-			);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleCheckBalance = async () => {
-		if (!user?.pocket_option_id) return;
-
-		setCheckingBalance(true);
-		setError("");
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`${apiUrl}/pocket-option/check-balance/${user.pocket_option_id}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				},
-			);
-
-			if (response.ok) {
-				await fetchUserData(); // Refresh user data
-			} else {
-				const data = await response.json();
-				setError(
-					data.detail ||
-						(language === "ru"
-							? "Ошибка проверки баланса"
-							: "Balance check error"),
-				);
-			}
-		} catch (err) {
-			setError(
-				language === "ru"
-					? "Ошибка соединения"
-					: "Connection error",
-			);
-		} finally {
-			setCheckingBalance(false);
-		}
-	};
-
-	const handleChangePassword = async (
-		e: React.FormEvent,
-	) => {
-		e.preventDefault();
-		setError("");
-
-		const token = localStorage.getItem("token");
-
-		try {
-			const response = await fetch(
-				`${apiUrl}/auth/change-password`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify({
-						old_password: oldPassword,
-						new_password: newPassword,
-					}),
-				},
-			);
-
-			if (response.ok) {
-				setShowChangePassword(false);
-				setOldPassword("");
-				setNewPassword("");
-				alert(
-					language === "ru"
-						? "Пароль успешно изменён"
-						: "Password changed successfully",
-				);
-			} else {
-				const data = await response.json();
-				setError(
-					data.detail ||
-						(language === "ru"
-							? "Ошибка смены пароля"
-							: "Password change error"),
-				);
-			}
-		} catch (err) {
-			setError(
-				language === "ru"
-					? "Ошибка соединения"
-					: "Connection error",
-			);
-		}
-	};
 
 	const handleLogout = () => {
 		localStorage.removeItem("token");
@@ -263,13 +74,15 @@ function DashboardPageContent() {
 		return (
 			<div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
 				<div className="text-white font-light">
-					{language === "ru"
-						? "Загрузка..."
-						: "Loading..."}
+					{language === "ru" ? "Загрузка..." : "Loading..."}
 				</div>
 			</div>
 		);
 	}
+
+	const hasAccess = accessStatus?.can_access;
+	const accessLevel = accessStatus?.access_level || "none";
+	const hasOtcAccess = accessLevel === "unlimited_all";
 
 	return (
 		<div className="min-h-screen bg-[#0a0e1a]">
@@ -280,479 +93,396 @@ function DashboardPageContent() {
 				<div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
 					<div className="flex justify-between items-center py-6">
 						<h1 className="text-2xl font-light text-white tracking-tight">
-							Trade Vision
+							ProfitHunter
 						</h1>
-						<button
-							onClick={handleLogout}
-							className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-light text-sm transition-colors"
-						>
-							{language === "ru" ? "Выйти" : "Logout"}
-						</button>
+						<div className="flex items-center gap-3">
+							{user && (
+								<span className="text-gray-400 text-sm hidden sm:block">
+									{user.email}
+								</span>
+							)}
+							<button
+								onClick={handleLogout}
+								className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-light text-sm transition-colors"
+							>
+								{language === "ru" ? "Выйти" : "Logout"}
+							</button>
+						</div>
 					</div>
 				</div>
 			</header>
 
-			{/* Content */}
 			<main className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
-				<h2 className="text-3xl font-light text-white tracking-tight mb-8">
-					{language === "ru"
-						? "Личный кабинет"
-						: "Dashboard"}
-				</h2>
-
-				{error && (
-					<div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-light">
-						{error}
-					</div>
+				{/* If no access - show deposit prompt */}
+				{!hasAccess && (
+					<NoAccessSection
+						user={user}
+						accessStatus={accessStatus}
+						apiUrl={apiUrl}
+						language={language}
+						onRefresh={fetchUserData}
+					/>
 				)}
 
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-					{/* User Info */}
-					<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6">
-						<h3 className="text-lg font-light text-white mb-4">
+				{/* If has access - show signal type selection */}
+				{hasAccess && (
+					<>
+						<h2 className="text-3xl font-light text-white tracking-tight mb-2">
 							{language === "ru"
-								? "Информация"
-								: "Information"}
-						</h3>
-						<div className="space-y-3">
-							<div>
-								<p className="text-gray-400 text-xs font-light mb-1">
-									Email
-								</p>
-								<p className="text-white font-light">
-									{user?.email}
-								</p>
-							</div>
-							<div>
-								<p className="text-gray-400 text-xs font-light mb-1">
-									{language === "ru" ? "Статус" : "Status"}
-								</p>
-								<p className="font-light text-green-400">
-									{language === "ru"
-										? "Активен"
-										: "Active"}
-								</p>
-							</div>
-							{user?.pocket_option_id && (
-								<div>
-									<p className="text-gray-400 text-xs font-light mb-1">
-										Pocket Option ID
-									</p>
-									<p className="text-white font-light">
-										{user.pocket_option_id}
-									</p>
-								</div>
-							)}
-							{accessStatus?.pocket_option_balance !==
-								undefined && (
-								<div>
-									<p className="text-gray-400 text-xs font-light mb-1">
-										{language === "ru"
-											? "Баланс"
-											: "Balance"}
-									</p>
-									<p className="text-white font-light">
-										${accessStatus.pocket_option_balance}
-									</p>
-								</div>
-							)}
-						</div>
-					</div>
+								? "Выберите тип сигналов"
+								: "Choose Signal Type"}
+						</h2>
+						<p className="text-gray-400 font-light mb-8">
+							{isWeekend
+								? language === "ru"
+									? "Сейчас выходные — биржа закрыта, доступны OTC сигналы"
+									: "Weekend — market closed, OTC signals available"
+								: language === "ru"
+									? "Биржа открыта — доступны основные торговые сигналы"
+									: "Market open — main trading signals available"}
+						</p>
 
-					{/* Actions */}
-					<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6">
-						<h3 className="text-lg font-light text-white mb-4">
-							{language === "ru"
-								? "Действия"
-								: "Actions"}
-						</h3>
-						<div className="space-y-3">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Regular Exchange */}
 							<button
-								onClick={() =>
-									setShowChangePassword(
-										!showChangePassword,
-									)
-								}
-								className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-light text-sm transition-colors"
+								onClick={() => {
+									if (!isWeekend) router.push("/signals?tf=5m&mode=regular");
+								}}
+								disabled={isWeekend}
+								className={`relative group rounded-2xl border p-8 text-left transition-all duration-300 ${
+									isWeekend
+										? "bg-[#0f1419]/50 border-gray-800/50 cursor-not-allowed opacity-50"
+										: "bg-[#0f1419] border-gray-700 hover:border-[#00c49a] hover:shadow-lg hover:shadow-[#00c49a]/10 cursor-pointer"
+								}`}
 							>
-								{language === "ru"
-									? "Сменить пароль"
-									: "Change Password"}
-							</button>
-						</div>
-					</div>
-				</div>
-
-				{/* Change Password Form */}
-				{showChangePassword && (
-					<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6 mb-8">
-						<h3 className="text-lg font-light text-white mb-4">
-							{language === "ru"
-								? "Смена пароля"
-								: "Change Password"}
-						</h3>
-						<form
-							onSubmit={handleChangePassword}
-							className="space-y-4"
-						>
-							<div>
-								<label className="block text-sm font-light text-gray-400 mb-2">
-									{language === "ru"
-										? "Старый пароль"
-										: "Old Password"}
-								</label>
-								<input
-									type="password"
-									value={oldPassword}
-									onChange={(e) =>
-										setOldPassword(e.target.value)
-									}
-									required
-									className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-								/>
-							</div>
-							<div>
-								<label className="block text-sm font-light text-gray-400 mb-2">
-									{language === "ru"
-										? "Новый пароль"
-										: "New Password"}
-								</label>
-								<input
-									type="password"
-									value={newPassword}
-									onChange={(e) =>
-										setNewPassword(e.target.value)
-									}
-									required
-									minLength={6}
-									className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-								/>
-							</div>
-							<button
-								type="submit"
-								className="w-full py-3 bg-white text-black rounded-lg font-light hover:bg-gray-100 transition-colors"
-							>
-								{language === "ru" ? "Сменить" : "Change"}
-							</button>
-						</form>
-					</div>
-				)}
-
-				{/* Pocket Option Setup */}
-				{!user?.pocket_option_verified && (
-					<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6 mb-8">
-						<h3 className="text-lg font-light text-white mb-4">
-							{language === "ru"
-								? "Настройка Pocket Option"
-								: "Pocket Option Setup"}
-						</h3>
-
-						<div className="space-y-4">
-							<div>
-								<button
-									onClick={() =>
-										window.open(POCKET_OPTION_URL, "_blank")
-									}
-									className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-light transition-colors mb-4"
-								>
-									{language === "ru"
-										? "Зарегистрироваться на Pocket Option"
-										: "Register on Pocket Option"}
-								</button>
-							</div>
-
-							<form
-								onSubmit={handleSubmitPocketId}
-								className="space-y-4"
-							>
-								<div>
-									<label className="block text-sm font-light text-gray-400 mb-2">
-										{language === "ru"
-											? "Pocket Option ID"
-											: "Pocket Option ID"}
-									</label>
-									<input
-										type="text"
-										value={pocketOptionId}
-										onChange={(e) =>
-											setPocketOptionId(e.target.value)
-										}
-										placeholder={
-											language === "ru"
-												? "Введите ваш Pocket Option ID"
-												: "Enter your Pocket Option ID"
-										}
-										required
-										className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-									/>
-								</div>
-								<button
-									type="submit"
-									disabled={loading}
-									className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white rounded-lg font-light transition-colors"
-								>
-									{loading
-										? language === "ru"
-											? "Проверяем..."
-											: "Checking..."
-										: language === "ru"
-										? "Подтвердить ID"
-										: "Verify ID"}
-								</button>
-							</form>
-						</div>
-					</div>
-				)}
-
-				{/* Deposit Check */}
-				{user?.pocket_option_verified &&
-					!user?.has_min_deposit && (
-						<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6 mb-8">
-							<h3 className="text-lg font-light text-white mb-4">
-								{language === "ru"
-									? "Проверка депозита"
-									: "Deposit Check"}
-							</h3>
-
-							<div className="space-y-4">
-								<p className="text-gray-400 font-light text-sm">
-									{language === "ru"
-										? "Пополните депозит на сумму не менее $10 для получения доступа к сигналам."
-										: "Make a deposit of at least $10 to get access to signals."}
-								</p>
-
-								<div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-									<p className="text-yellow-300 text-sm">
-										<strong>Pocket Option ID:</strong>{" "}
-										{user.pocket_option_id}
-									</p>
-								</div>
-
-								<button
-									onClick={handleCheckBalance}
-									disabled={checkingBalance}
-									className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white rounded-lg font-light transition-colors"
-								>
-									{checkingBalance
-										? language === "ru"
-											? "Проверяем..."
-											: "Checking..."
-										: language === "ru"
-										? "Проверить баланс"
-										: "Check Balance"}
-								</button>
-							</div>
-						</div>
-					)}
-
-				{/* Access Status */}
-				{accessStatus && (
-					<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6 mb-8">
-						<h3 className="text-lg font-light text-white mb-4">
-							{language === "ru"
-								? "Статус доступа"
-								: "Access Status"}
-						</h3>
-
-						<div className="space-y-3">
-							<div className="flex justify-between items-center">
-								<span className="text-gray-400">
-									{language === "ru"
-										? "Email подтвержден"
-										: "Email Verified"}
-								</span>
-								<span
-									className={
-										accessStatus.is_verified
-											? "text-green-400"
-											: "text-red-400"
-									}
-								>
-									{accessStatus.is_verified ? "✓" : "✗"}
-								</span>
-							</div>
-
-							<div className="flex justify-between items-center">
-								<span className="text-gray-400">
-									Pocket Option ID
-								</span>
-								<span
-									className={
-										accessStatus.pocket_option_verified
-											? "text-green-400"
-											: "text-red-400"
-									}
-								>
-									{accessStatus.pocket_option_verified
-										? "✓"
-										: "✗"}
-								</span>
-							</div>
-
-							<div className="flex justify-between items-center">
-								<span className="text-gray-400">
-									{language === "ru"
-										? "Минимальный депозит"
-										: "Minimum Deposit"}
-								</span>
-								<span
-									className={
-										accessStatus.has_min_deposit
-											? "text-green-400"
-											: "text-red-400"
-									}
-								>
-									{accessStatus.has_min_deposit
-										? "✓"
-										: "✗"}
-								</span>
-							</div>
-
-							{accessStatus.message && (
-								<div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-									<p className="text-blue-300 text-sm">
-										{accessStatus.message}
-									</p>
-								</div>
-							)}
-
-							{accessStatus.can_access && (
-								<div className="mt-4 pt-4 border-t border-gray-700">
-									<button
-										onClick={() =>
-											router.push("/signals?tf=5m")
-										}
-										className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-light transition-colors"
+								<div className="flex justify-between items-start mb-6">
+									<div
+										className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+											isWeekend
+												? "bg-gray-800 text-gray-500"
+												: "bg-[#00c49a]/10 text-[#00c49a]"
+										}`}
 									>
-										{language === "ru"
-											? "Перейти к сигналам"
-											: "Go to Signals"}
-									</button>
+										<svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+										</svg>
+									</div>
+									<span
+										className={`px-3 py-1 rounded-full text-xs font-medium ${
+											isWeekend
+												? "bg-red-500/10 text-red-400 border border-red-500/20"
+												: "bg-green-500/10 text-green-400 border border-green-500/20"
+										}`}
+									>
+										{isWeekend
+											? language === "ru" ? "Закрыта" : "Closed"
+											: language === "ru" ? "Открыта" : "Open"}
+									</span>
 								</div>
-							)}
 
-							{!accessStatus.can_access &&
-								accessStatus.message && (
-									<div className="mt-4 pt-4 border-t border-gray-700">
-										<div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-											<p className="text-yellow-300 text-sm font-light mb-2">
-												{language === "ru"
-													? "Уровни доступа к сигналам:"
-													: "Signal access levels:"}
-											</p>
-											<ul className="text-xs text-gray-300 space-y-1">
-												<li>
-													• $10+ —{" "}
-													{language === "ru"
-														? "1 сигнал в день"
-														: "1 signal per day"}
-												</li>
-												<li>
-													• $50+ —{" "}
-													{language === "ru"
-														? "Безлимит (основные пары)"
-														: "Unlimited (major pairs)"}
-												</li>
-												<li>
-													• $150+ —{" "}
-													{language === "ru"
-														? "Безлимит (все активы)"
-														: "Unlimited (all assets)"}
-												</li>
-											</ul>
-										</div>
+								<h3 className="text-xl font-semibold text-white mb-2">
+									{language === "ru" ? "Обычная биржа" : "Regular Exchange"}
+								</h3>
+								<p className="text-gray-400 text-sm mb-4">
+									EUR/USD, GBP/USD, USD/JPY, CAD/JPY, GBP/JPY, EUR/JPY
+								</p>
+								<p className="text-gray-500 text-xs">
+									{language === "ru"
+										? "Пн-Пт \u2022 Таймфреймы: 3м, 5м, 7м"
+										: "Mon-Fri \u2022 Timeframes: 3m, 5m, 7m"}
+								</p>
+
+								{isWeekend && (
+									<div className="mt-4 p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
+										<p className="text-red-400/70 text-xs">
+											{language === "ru"
+												? "Биржа закрыта по выходным. Торговля возобновится в понедельник."
+												: "Exchange closed on weekends. Trading resumes Monday."}
+										</p>
 									</div>
 								)}
-						</div>
-					</div>
-				)}
-
-				{/* Promo Modal */}
-				{showPromoModal && (
-					<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-						<div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl border border-blue-500/30 p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-							<button
-								onClick={() => setShowPromoModal(false)}
-								className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"
-							>
-								×
 							</button>
 
-							<div className="text-center mb-8">
-								<h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-									Добро пожаловать!
-								</h2>
-								<p className="text-xl text-slate-300">
-									Для начала работы с торговыми сигналами
-									необходимо пополнить ваш аккаунт
+							{/* OTC */}
+							<button
+								onClick={() => {
+									if (isWeekend && hasOtcAccess)
+										router.push("/signals?tf=5m&mode=otc");
+								}}
+								disabled={!isWeekend || !hasOtcAccess}
+								className={`relative group rounded-2xl border p-8 text-left transition-all duration-300 ${
+									!isWeekend || !hasOtcAccess
+										? "bg-[#0f1419]/50 border-gray-800/50 cursor-not-allowed opacity-50"
+										: "bg-[#0f1419] border-gray-700 hover:border-[#f59e0b] hover:shadow-lg hover:shadow-[#f59e0b]/10 cursor-pointer"
+								}`}
+							>
+								<div className="flex justify-between items-start mb-6">
+									<div
+										className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+											!isWeekend || !hasOtcAccess
+												? "bg-gray-800 text-gray-500"
+												: "bg-amber-500/10 text-amber-400"
+										}`}
+									>
+										<svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+									</div>
+									<span
+										className={`px-3 py-1 rounded-full text-xs font-medium ${
+											isWeekend && hasOtcAccess
+												? "bg-green-500/10 text-green-400 border border-green-500/20"
+												: !hasOtcAccess
+													? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+													: "bg-red-500/10 text-red-400 border border-red-500/20"
+										}`}
+									>
+										{!hasOtcAccess
+											? "$200+"
+											: isWeekend
+												? language === "ru" ? "Открыто" : "Open"
+												: language === "ru" ? "Закрыто" : "Closed"}
+									</span>
+								</div>
+
+								<h3 className="text-xl font-semibold text-white mb-2">
+									{language === "ru" ? "OTC Сигналы" : "OTC Signals"}
+								</h3>
+								<p className="text-gray-400 text-sm mb-4">
+									{language === "ru"
+										? "Внебиржевые активы для торговли по выходным"
+										: "Over-the-counter assets for weekend trading"}
 								</p>
-							</div>
+								<p className="text-gray-500 text-xs">
+									{language === "ru"
+										? "Сб-Вс \u2022 Таймфреймы: 3м, 5м, 7м"
+										: "Sat-Sun \u2022 Timeframes: 3m, 5m, 7m"}
+								</p>
 
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-								{/* Level 1 */}
-								<div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 hover:border-blue-500/50 transition-all">
-									<div className="text-center">
-										<div className="text-4xl font-bold text-blue-400 mb-3">
-											$10+
-										</div>
-										<h3 className="text-lg font-semibold text-white mb-3">
-											Базовый
-										</h3>
-										<ul className="text-slate-300 space-y-1 text-sm">
-											<li>• 1 сигнал в день</li>
-											<li>• Основные пары</li>
-											<li>• Стандартные ТФ</li>
-										</ul>
+								{!hasOtcAccess && (
+									<div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+										<p className="text-amber-400/70 text-xs">
+											{language === "ru"
+												? "Требуется депозит от $200 для доступа к OTC сигналам."
+												: "Deposit $200+ required for OTC signals."}
+										</p>
 									</div>
-								</div>
+								)}
 
-								{/* Level 2 */}
-								<div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-2xl border-2 border-blue-500/50 p-6 hover:border-blue-400/70 transition-all transform scale-105">
-									<div className="text-center">
-										<div className="text-4xl font-bold text-purple-400 mb-3">
-											$50+
-										</div>
-										<h3 className="text-lg font-semibold text-white mb-3">
-											Расширенный
-										</h3>
-										<ul className="text-slate-200 space-y-1 text-sm">
-											<li>• Безлимит сигналов</li>
-											<li>• Основные пары</li>
-											<li>• Все таймфреймы</li>
-										</ul>
+								{hasOtcAccess && !isWeekend && (
+									<div className="mt-4 p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
+										<p className="text-red-400/70 text-xs">
+											{language === "ru"
+												? "OTC доступен только по выходным (Сб-Вс)."
+												: "OTC available weekends only (Sat-Sun)."}
+										</p>
 									</div>
-								</div>
+								)}
+							</button>
+						</div>
 
-								{/* Level 3 */}
-								<div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 hover:border-amber-500/50 transition-all">
-									<div className="text-center">
-										<div className="text-4xl font-bold text-amber-400 mb-3">
-											$150+
-										</div>
-										<h3 className="text-lg font-semibold text-white mb-3">
-											Премиум
-										</h3>
-										<ul className="text-slate-300 space-y-1 text-sm">
-											<li>• Безлимит сигналов</li>
-											<li>• Все активы (OTC)</li>
-											<li>• VIP поддержка</li>
-										</ul>
-									</div>
+						{/* Balance info */}
+						<div className="mt-8 bg-[#0f1419] rounded-xl border border-gray-800 p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-gray-400 text-sm">
+										{language === "ru" ? "Ваш баланс" : "Your balance"}
+									</p>
+									<p className="text-2xl font-light text-white">
+										${accessStatus?.pocket_option_balance || 0}
+									</p>
 								</div>
-							</div>
-
-							<div className="text-center">
-								<button
-									onClick={() => setShowPromoModal(false)}
-									className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
-								>
-									Понятно
-								</button>
+								<div>
+									<p className="text-gray-400 text-sm">
+										{language === "ru" ? "Уровень доступа" : "Access level"}
+									</p>
+									<p className="text-lg font-light text-[#00c49a]">
+										{accessLevel === "unlimited_all"
+											? language === "ru" ? "Премиум" : "Premium"
+											: accessLevel === "unlimited_main"
+												? language === "ru" ? "Расширенный" : "Extended"
+												: language === "ru" ? "Базовый" : "Basic"}
+									</p>
+								</div>
+								<div className="text-right">
+									<p className="text-gray-400 text-sm">
+										{language === "ru" ? "Сейчас" : "Now"}
+									</p>
+									<p className="text-lg font-light text-white">
+										{new Date().toLocaleTimeString(
+											language === "ru" ? "ru-RU" : "en-US",
+											{ hour: "2-digit", minute: "2-digit" }
+										)}
+									</p>
+									<p className="text-gray-500 text-xs">
+										{isWeekend
+											? language === "ru" ? "Выходной" : "Weekend"
+											: language === "ru" ? "Рабочий день" : "Weekday"}
+									</p>
+								</div>
 							</div>
 						</div>
-					</div>
+					</>
 				)}
 			</main>
+		</div>
+	);
+}
+
+function NoAccessSection({
+	user,
+	accessStatus,
+	apiUrl,
+	language,
+	onRefresh,
+}: {
+	user: any;
+	accessStatus: any;
+	apiUrl: string;
+	language: string;
+	onRefresh: () => void;
+}) {
+	const [pocketOptionId, setPocketOptionId] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState("");
+	const [checkingBalance, setCheckingBalance] = useState(false);
+
+	const POCKET_OPTION_BASE_URL = "https://pocket-option.su";
+
+	const handleSubmitPocketId = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!pocketOptionId.trim()) return;
+		setLoading(true);
+		setError("");
+		try {
+			const token = localStorage.getItem("token");
+			const response = await fetch(`${apiUrl}/auth/verify-pocket-option`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ pocket_option_id: pocketOptionId.trim() }),
+			});
+			if (response.ok) {
+				setPocketOptionId("");
+				onRefresh();
+			} else {
+				const data = await response.json();
+				setError(data.detail || "Error");
+			}
+		} catch {
+			setError(language === "ru" ? "Ошибка соединения" : "Connection error");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleCheckBalance = async () => {
+		if (!user?.pocket_option_id) return;
+		setCheckingBalance(true);
+		try {
+			const token = localStorage.getItem("token");
+			await fetch(
+				`${apiUrl}/pocket-option/check-balance/${user.pocket_option_id}`,
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			onRefresh();
+		} catch {
+			// ignore
+		} finally {
+			setCheckingBalance(false);
+		}
+	};
+
+	return (
+		<div className="space-y-6">
+			<h2 className="text-3xl font-light text-white tracking-tight mb-4">
+				{language === "ru" ? "Получите доступ к сигналам" : "Get Signal Access"}
+			</h2>
+
+			{error && (
+				<div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+					{error}
+				</div>
+			)}
+
+			{!user?.pocket_option_verified && (
+				<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6">
+					<h3 className="text-lg font-light text-white mb-4">
+						1. {language === "ru" ? "Зарегистрируйтесь на Pocket Option" : "Register on Pocket Option"}
+					</h3>
+					<button
+						onClick={() =>
+							window.open(`${POCKET_OPTION_BASE_URL}?click_id=${user?.id}`, "_blank")
+						}
+						className="w-full py-3 bg-[#00c49a] hover:bg-[#00b38a] text-white rounded-lg font-light transition-colors mb-4"
+					>
+						{language === "ru" ? "Зарегистрироваться" : "Register"}
+					</button>
+					<form onSubmit={handleSubmitPocketId} className="space-y-3">
+						<input
+							type="text"
+							value={pocketOptionId}
+							onChange={(e) => setPocketOptionId(e.target.value)}
+							placeholder="Pocket Option ID"
+							required
+							className="w-full px-4 py-3 bg-[#1a1f2e] border border-gray-700 rounded-lg text-white font-light focus:border-[#00c49a] outline-none"
+						/>
+						<button
+							type="submit"
+							disabled={loading}
+							className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white rounded-lg font-light transition-colors"
+						>
+							{loading
+								? language === "ru" ? "Проверяем..." : "Checking..."
+								: language === "ru" ? "Подтвердить ID" : "Verify ID"}
+						</button>
+					</form>
+				</div>
+			)}
+
+			{user?.pocket_option_verified && !user?.has_min_deposit && (
+				<div className="bg-[#0f1419] rounded-xl border border-gray-800 p-6">
+					<h3 className="text-lg font-light text-white mb-4">
+						2. {language === "ru" ? "Пополните депозит" : "Make a deposit"}
+					</h3>
+					<p className="text-gray-400 text-sm mb-4">
+						{language === "ru" ? "Минимальный депозит: $50" : "Minimum deposit: $50"}
+					</p>
+
+					<div className="grid grid-cols-3 gap-3 mb-4">
+						<div className="bg-[#1a1f2e] rounded-lg p-3 text-center border border-gray-700">
+							<p className="text-blue-400 font-bold text-lg">$50+</p>
+							<p className="text-gray-400 text-xs">
+								{language === "ru" ? "Базовый" : "Basic"}
+							</p>
+						</div>
+						<div className="bg-[#1a1f2e] rounded-lg p-3 text-center border border-blue-500/30">
+							<p className="text-purple-400 font-bold text-lg">$100+</p>
+							<p className="text-gray-400 text-xs">
+								{language === "ru" ? "Расширенный" : "Extended"}
+							</p>
+						</div>
+						<div className="bg-[#1a1f2e] rounded-lg p-3 text-center border border-gray-700">
+							<p className="text-amber-400 font-bold text-lg">$200+</p>
+							<p className="text-gray-400 text-xs">
+								{language === "ru" ? "Премиум + OTC" : "Premium + OTC"}
+							</p>
+						</div>
+					</div>
+
+					<button
+						onClick={handleCheckBalance}
+						disabled={checkingBalance}
+						className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 text-white rounded-lg font-light transition-colors"
+					>
+						{checkingBalance
+							? language === "ru" ? "Проверяем..." : "Checking..."
+							: language === "ru" ? "Проверить баланс" : "Check Balance"}
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }

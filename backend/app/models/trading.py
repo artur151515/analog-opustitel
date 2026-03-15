@@ -25,6 +25,7 @@ class Signal(Base):
     tf = Column(String(10), nullable=False)
     ts = Column(DateTime(timezone=True), nullable=False)
     direction = Column(String(10), nullable=False)
+    confidence = Column(Float, nullable=True, default=None)  # Signal accuracy/confidence 0.0-1.0
     enter_at = Column(DateTime(timezone=True), nullable=False)
     expire_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

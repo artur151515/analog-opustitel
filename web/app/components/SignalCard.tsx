@@ -211,8 +211,24 @@ export default function SignalCard({
 				<h2 className="text-3xl font-light text-white mb-3 tracking-tight">
 					{signal.symbol}
 				</h2>
-				<div className="inline-block bg-gray-800/50 text-gray-300 px-4 py-1.5 rounded-full text-sm font-light">
-					{signal.tf}
+				<div className="flex items-center justify-center gap-3">
+					<div className="inline-block bg-gray-800/50 text-gray-300 px-4 py-1.5 rounded-full text-sm font-light">
+						{signal.tf}
+					</div>
+					{signal.confidence !== undefined && signal.confidence !== null && (
+						<div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium ${
+							signal.confidence >= 0.75
+								? "bg-green-500/20 text-green-400 border border-green-500/30"
+								: signal.confidence >= 0.6
+								? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+								: "bg-red-500/20 text-red-400 border border-red-500/30"
+						}`}>
+							<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+								<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+							</svg>
+							{(signal.confidence * 100).toFixed(1)}%
+						</div>
+					)}
 				</div>
 			</div>
 

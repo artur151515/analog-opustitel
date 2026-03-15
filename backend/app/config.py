@@ -21,16 +21,19 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
-    smtp_from_email: str = "noreply@tradevision.com"
-    smtp_from_name: str = "Trade Vision"
+    smtp_from_email: str = "noreply@proffithunter.com"
+    smtp_from_name: str = "ProfitHunter"
     smtp_use_tls: bool = True
+
+    pocket_option_partner_id: str = Field(default="", description="Pocket Option partner ID")
+    pocket_option_api_token: str = Field(default="", description="Pocket Option affiliate API token")
     
     allowed_symbols_raw: str = Field(
         default="CADJPY,GBPJPY,EURUSD,GBPUSD,USDJPY,EURJPY",
         description="Comma-separated list of allowed trading symbols"
     )
     
-    app_name: str = "Vision of Trading"
+    app_name: str = "ProfitHunter"
     app_version: str = "1.0.0"
     debug: bool = False
     log_level: str = "INFO"

@@ -4,7 +4,9 @@ from ..db import get_db
 from ..models.user import User
 from .auth import get_current_user
 from ..activity_logger import log_balance_update, log_important_action
+from ..config import settings
 from typing import Optional
+import hashlib
 import requests
 import logging
 
@@ -344,35 +346,66 @@ async def check_balance(
     db: Session = Depends(get_db)
 ):
     """
-    Проверка баланса пользователя в Pocket Option
+    Проверка баланса через Pocket Option Affiliate API.
+    hash = md5("{user_id}:{partner_id}:{api_token}")
     """
-    try:
-        # Здесь должна быть логика обращения к табличке на Pocket Option
-        # Пока что возвращаем моковые данные
+    partner_id = settings.pocket_option_partner_id
+    api_token = settings.pocket_option_api_token
 
-        # Пример обращения к внешней табличке
-        # response = requests.get(f"https://pocketoptions.com/api/balance/{pocket_option_id}")
-        # balance_data = response.json()
-
-        # Моковые данные для демонстрации
-        balance_data = {
-            "balance": 250.75,
-            "currency": "USD",
-            "last_updated": "2024-01-15T10:30:00Z",
-            "status": "active"
-        }
-
-        # Обновляем баланс в базе данных
-        current_user.pocket_option_balance = balance_data["balance"]
-        db.commit()
-
+    if not partner_id or not api_token:
+        logger.warning("Pocket Option partner_id or api_token not configured")
         return {
-            "status": "success",
-            "balance": balance_data["balance"],
-            "currency": balance_data["currency"],
+            "status": "not_configured",
+            "message": "Pocket Option API credentials not set. Balance is based on postbacks.",
+            "balance": float(current_user.pocket_option_balance or 0),
             "pocket_option_id": pocket_option_id
         }
 
+    try:
+        hash_val = hashlib.md5(
+            f"{pocket_option_id}:{partner_id}:{api_token}".encode()
+        ).hexdigest()
+
+        api_url = f"https://affiliate.pocketoption.com/api/user-info/{pocket_option_id}/{partner_id}/{hash_val}"
+        logger.info(f"Checking balance via PO affiliate API for ID: {pocket_option_id}")
+
+        response = requests.get(
+            api_url,
+            headers={"User-Agent": "ProfitHunter/1.0", "Accept": "application/json"},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"PO affiliate API response: {data}")
+
+            balance_value = float(data.get("balance", 0.0) or data.get("total_deposit", 0.0) or 0.0)
+            old_balance = float(current_user.pocket_option_balance or 0)
+
+            current_user.pocket_option_balance = balance_value
+            if balance_value >= 10.0:
+                current_user.has_min_deposit = True
+
+            if balance_value > old_balance:
+                await log_balance_update(db, current_user, old_balance, balance_value, balance_value - old_balance)
+
+            db.commit()
+
+            return {
+                "status": "success",
+                "balance": balance_value,
+                "currency": "USD",
+                "pocket_option_id": pocket_option_id
+            }
+        else:
+            logger.error(f"PO affiliate API error {response.status_code}: {response.text}")
+            raise HTTPException(status_code=502, detail=f"Pocket Option API returned {response.status_code}")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error checking PO balance: {e}")
+        raise HTTPException(status_code=503, detail="Failed to connect to Pocket Option API")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error checking balance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -473,7 +506,7 @@ async def get_webhook_url(current_user: User = Depends(get_current_user)):
     Получение URL для вебхука Pocket Option
     """
     return {
-        "webhook_url": "https://visionoftrading.com/api/pocket-option/postback",
+        "webhook_url": "https://proffithunter.com/api/pocket-option/postback",
         "user_id": current_user.id,
         "instructions": "Use this URL in your Pocket Option postback settings"
     }

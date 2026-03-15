@@ -16,7 +16,8 @@ def create_signal(
     direction: str,
     enter_at: float,
     expire_at: float,
-    timestamp: Optional[float] = None
+    timestamp: Optional[float] = None,
+    confidence: Optional[float] = None
 ) -> Signal:
     try:
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
@@ -24,26 +25,27 @@ def create_signal(
             symbol = Symbol(name=symbol_name)
             db.add(symbol)
             db.flush()
-        
+
         signal = Signal(
             symbol_id=symbol.id,
             tf=timeframe,
             ts=datetime.fromtimestamp(timestamp) if timestamp else datetime.now(),
             direction=direction,
+            confidence=confidence,
             enter_at=datetime.fromtimestamp(enter_at),
             expire_at=datetime.fromtimestamp(expire_at)
         )
-        
+
         db.add(signal)
         db.commit()
         db.refresh(signal)
-        
-        logger.info(f"Created signal: {symbol_name} {timeframe} {direction} at {enter_at}")
-        
+
+        logger.info(f"Created signal: {symbol_name} {timeframe} {direction} conf={confidence} at {enter_at}")
+
         update_rolling_stats(db, symbol_name, timeframe)
-        
+
         return signal
-        
+
     except Exception as e:
         logger.error(f"Error creating signal: {e}")
         db.rollback()
@@ -58,57 +60,56 @@ def update_rolling_stats(
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             return
-        
-        periods = [24, 168, 720]
-        
-        for period_hours in periods:
-            period_start = datetime.now() - timedelta(hours=period_hours)
-            period_timestamp = period_start.timestamp()
-            
-            signals = db.query(Signal).filter(
-                and_(
-                    Signal.symbol_id == symbol.id,
-                    Signal.tf == timeframe,
-                    Signal.ts >= period_start
-                )
-            ).all()
-            
-            if not signals:
-                continue
-            
-            total_signals = len(signals)
-            up_signals = len([s for s in signals if s.direction == 'up'])
-            down_signals = len([s for s in signals if s.direction == 'down'])
-            
-            stats = db.query(StatsRolling).filter(
-                and_(
-                    StatsRolling.symbol_id == symbol.id,
-                    StatsRolling.tf == timeframe,
-                    StatsRolling.period_hours == period_hours
-                )
-            ).first()
-            
-            if not stats:
-                stats = StatsRolling(
-                    symbol_id=symbol.id,
-                    tf=timeframe,
-                    period_hours=period_hours
-                )
-                db.add(stats)
-            
-            stats.total_signals = total_signals
-            stats.up_signals = up_signals
-            stats.down_signals = down_signals
-            stats.updated_at = datetime.now()
-            
-            db.commit()
-            
-            logger.info(f"Updated stats for {symbol_name} {timeframe} {period_hours}h: {total_signals} total, {up_signals} up, {down_signals} down")
-            
+
+        # Use window=200 as default (matches model)
+        window = 200
+
+        # Count recent signals
+        signals = db.query(Signal).filter(
+            and_(
+                Signal.symbol_id == symbol.id,
+                Signal.tf == timeframe
+            )
+        ).order_by(desc(Signal.ts)).limit(window).all()
+
+        if not signals:
+            return
+
+        total = len(signals)
+        ups = len([s for s in signals if s.direction == 'UP'])
+        downs = len([s for s in signals if s.direction == 'DOWN'])
+
+        # Simple winrate based on direction balance
+        winrate = ups / total if total > 0 else 0.5
+
+        stats = db.query(StatsRolling).filter(
+            and_(
+                StatsRolling.symbol_id == symbol.id,
+                StatsRolling.tf == timeframe,
+                StatsRolling.window == window
+            )
+        ).first()
+
+        if not stats:
+            stats = StatsRolling(
+                symbol_id=symbol.id,
+                tf=timeframe,
+                window=window
+            )
+            db.add(stats)
+
+        stats.total_signals = total
+        stats.wins = ups
+        stats.losses = downs
+        stats.winrate = winrate
+
+        db.commit()
+
+        logger.info(f"Updated stats for {symbol_name} {timeframe}: {total} total, winrate={winrate:.2f}")
+
     except Exception as e:
         logger.error(f"Error updating rolling stats: {e}")
         db.rollback()
-        raise
 
 def get_latest_signal(
     db: Session,
@@ -119,16 +120,16 @@ def get_latest_signal(
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             return None
-        
+
         signal = db.query(Signal).filter(
             and_(
                 Signal.symbol_id == symbol.id,
                 Signal.tf == timeframe
             )
         ).order_by(desc(Signal.created_at)).first()
-        
+
         return signal
-        
+
     except Exception as e:
         logger.error(f"Error getting latest signal: {e}")
         return None
@@ -143,9 +144,9 @@ def get_signals_count(
         symbol = db.query(Symbol).filter(Symbol.name == symbol_name).first()
         if not symbol:
             return {"total": 0, "up": 0, "down": 0}
-        
+
         period_start = datetime.now() - timedelta(hours=hours)
-        
+
         total = db.query(Signal).filter(
             and_(
                 Signal.symbol_id == symbol.id,
@@ -153,28 +154,27 @@ def get_signals_count(
                 Signal.ts >= period_start
             )
         ).count()
-        
+
         up = db.query(Signal).filter(
             and_(
                 Signal.symbol_id == symbol.id,
                 Signal.tf == timeframe,
                 Signal.ts >= period_start,
-                Signal.direction == 'up'
+                Signal.direction == 'UP'
             )
         ).count()
-        
+
         down = db.query(Signal).filter(
             and_(
                 Signal.symbol_id == symbol.id,
                 Signal.tf == timeframe,
                 Signal.ts >= period_start,
-                Signal.direction == 'down'
+                Signal.direction == 'DOWN'
             )
         ).count()
-        
+
         return {"total": total, "up": up, "down": down}
-        
+
     except Exception as e:
         logger.error(f"Error getting signals count: {e}")
         return {"total": 0, "up": 0, "down": 0}
-

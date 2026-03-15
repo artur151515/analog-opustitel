@@ -70,10 +70,6 @@ function SignalsPageContent() {
 		useState(false);
 	const [checkingAuth, setCheckingAuth] =
 		useState(true);
-	const [
-		isGeneratingSignal,
-		setIsGeneratingSignal,
-	] = useState(false);
 	const { t, language, translate } = useLanguage();
 
 	// Dynamic API URL based on current host
@@ -125,16 +121,6 @@ function SignalsPageContent() {
 	// Check authorization
 	useEffect(() => {
 		const checkAuth = async () => {
-			// Check if admin mode is enabled
-			const isAdmin =
-				localStorage.getItem("admin_mode") === "true";
-
-			if (isAdmin) {
-				setIsAuthorized(true);
-				setCheckingAuth(false);
-				return;
-			}
-
 			const token = localStorage.getItem("token");
 			if (!token) {
 				setCheckingAuth(false);
@@ -156,6 +142,7 @@ function SignalsPageContent() {
 					const data = await response.json();
 					if (data.can_access) {
 						setIsAuthorized(true);
+						setCheckingAuth(false);
 					} else {
 						setCheckingAuth(false);
 						router.push("/dashboard");
@@ -209,42 +196,6 @@ function SignalsPageContent() {
 		? (stats.break_even_at * 100).toFixed(1)
 		: "54.1";
 
-	// Function to generate new signal
-	const generateNewSignal = async () => {
-		setIsGeneratingSignal(true);
-		try {
-			const response = await fetch(
-				`${apiUrl}/signal/${selectedSymbol}/${selectedTimeframe}`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				// Refresh the signal data
-				mutateSignal();
-				// Show success message
-				console.log(
-					"New signal generated successfully!",
-				);
-			} else {
-				console.error(
-					"Failed to generate new signal",
-				);
-			}
-		} catch (error) {
-			console.error(
-				"Error generating new signal:",
-				error,
-			);
-		} finally {
-			setIsGeneratingSignal(false);
-		}
-	};
-
 	if (checkingAuth) {
 		return (
 			<div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
@@ -279,7 +230,7 @@ function SignalsPageContent() {
 						</div>
 						<div className="flex-shrink-0 text-center absolute left-1/2 transform -translate-x-1/2">
 							<h1 className="text-3xl font-bold text-white tracking-tight bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-								📈 Vision of Trading
+								ProfitHunter
 							</h1>
 						</div>
 
@@ -378,34 +329,12 @@ function SignalsPageContent() {
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Signal Card */}
 					<div className="lg:col-span-2">
-						<div className="flex justify-between items-center mb-6">
+						<div className="mb-6">
 							<h2 className="text-3xl font-bold text-white">
 								<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
 									{t("latest_signal")}
 								</span>
 							</h2>
-							<button
-								onClick={generateNewSignal}
-								disabled={isGeneratingSignal}
-								className="btn-primary"
-							>
-								<ArrowPathIcon
-									className={`h-5 w-5 ${
-										isGeneratingSignal ? "animate-spin" : ""
-									}`}
-								/>
-								<span className="ml-2">
-									{isGeneratingSignal
-										? translate({
-												ru: "Генерируем...",
-												en: "Generating...",
-										  })
-										: translate({
-												ru: "Получить новый сигнал",
-												en: "Get new signal",
-										  })}
-								</span>
-							</button>
 						</div>
 						<SignalCard
 							signal={signal || null}
